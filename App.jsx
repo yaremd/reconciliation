@@ -870,76 +870,78 @@ function Sidebar({ collapsed, onToggle }) {
 }
 
 // ── SITE HEADER ────────────────────────────────────────────────────────────
+const TABS = [
+  { key: 0,   label: "Reconciliations list" },
+  { key: 0.5, label: "Account selected" },
+  { key: 1,   label: "Period selected" },
+  { key: 2,   label: "Upload statement" },
+  { key: 3,   label: "Reconcile" },
+  { key: 4,   label: "Report" },
+];
+
 function SiteHeader({ collapsed, onToggleCollapse, screen, onScreenChange, selectedAccount }) {
   const [privacy, setPrivacy] = useState(false);
 
-  // Dynamic breadcrumb
-  let breadcrumbParts;
-  if (screen === 0) {
-    breadcrumbParts = [
-      { label: "Accounting", muted: true },
-      { label: "Reconciliation", bold: true },
-    ];
-  } else if (screen === 0.5) {
-    breadcrumbParts = [
-      { label: "Reconciliation", muted: true },
-      { label: selectedAccount?.name || "Account", bold: true },
-    ];
-  } else {
-    breadcrumbParts = [
-      { label: selectedAccount?.name || "HSBC Current Account", muted: true },
-      { label: "June 2025", bold: true },
-    ];
-  }
-
   return (
     <header style={{
-      height: 56, display: "flex", alignItems: "center", justifyContent: "space-between",
+      height: 56, display: "flex", alignItems: "center",
       padding: "0 16px 0 8px",
       borderBottom: "1px solid var(--border)",
       background: "var(--background)",
       position: "sticky", top: 0, zIndex: 20,
-      gap: 8, flexShrink: 0,
+      flexShrink: 0, gap: 0,
     }}>
-      {/* Left: toggle + breadcrumb */}
-      <div style={{ display: "flex", alignItems: "center", gap: 4, minWidth: 0, flex: 1 }}>
-        {/* Sidebar toggle */}
+      {/* Left: toggle + breadcrumb — flex:1 so center stays centered */}
+      <div style={{ display: "flex", alignItems: "center", gap: 4, flex: 1, minWidth: 0 }}>
         <button onClick={onToggleCollapse} style={{
           padding: 8, background: "transparent", border: "none",
           borderRadius: "var(--radius)", cursor: "pointer",
-          color: "var(--foreground)", display: "flex", alignItems: "center",
-          flexShrink: 0,
+          color: "var(--foreground)", display: "flex", alignItems: "center", flexShrink: 0,
         }}
           onMouseEnter={e => e.currentTarget.style.background = "var(--accent)"}
           onMouseLeave={e => e.currentTarget.style.background = "transparent"}
         >
           <PanelLeft size={18} />
         </button>
-
         <Separator vertical />
-
-        {/* Breadcrumb */}
         <nav style={{ display: "flex", alignItems: "center", gap: 4, fontSize: 14, minWidth: 0 }}>
-          <a href="#" style={{ display: "flex", alignItems: "center", gap: 6, color: "var(--muted-foreground)", textDecoration: "none", fontWeight: 500, padding: "4px 6px", borderRadius: "var(--radius)", flexShrink: 0 }}
+          <a href="#" style={{ display: "flex", alignItems: "center", gap: 5, color: "var(--muted-foreground)", textDecoration: "none", fontWeight: 500, padding: "4px 6px", borderRadius: "var(--radius)", flexShrink: 0 }}
             onMouseEnter={e => e.currentTarget.style.color = "var(--foreground)"}
             onMouseLeave={e => e.currentTarget.style.color = "var(--muted-foreground)"}
           >
-            <ArrowLeft size={15} />
-            <span style={{ fontSize: 14 }}>{breadcrumbParts[0].label}</span>
+            <ArrowLeft size={14} />
+            <span>Accounting</span>
           </a>
-          <ChevronRight size={14} style={{ color: "var(--muted-foreground)", flexShrink: 0 }} />
+          <ChevronRight size={13} style={{ color: "var(--muted-foreground)", flexShrink: 0 }} />
           <span style={{ fontSize: 14, fontWeight: 600, color: "var(--foreground)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-            {breadcrumbParts[1].label}
+            Reconciliation
           </span>
         </nav>
       </div>
 
-      {/* Right: actions */}
-      <div style={{ display: "flex", alignItems: "center", gap: 6, flexShrink: 0 }}>
-        {/* Privacy toggle */}
+      {/* Center: 6 tabs always visible */}
+      <div style={{ display: "flex", gap: 1, background: "var(--muted)", borderRadius: "var(--radius)", padding: 3, flexShrink: 0 }}>
+        {TABS.map(tab => (
+          <button key={tab.key} onClick={() => onScreenChange(tab.key)} style={{
+            padding: "4px 12px",
+            background: screen === tab.key ? "var(--background)" : "transparent",
+            border: "none", borderRadius: "calc(var(--radius) - 2px)",
+            fontSize: 12, fontWeight: screen === tab.key ? 600 : 400,
+            color: screen === tab.key ? "var(--foreground)" : "var(--muted-foreground)",
+            cursor: "pointer", transition: "background .15s, color .15s",
+            boxShadow: screen === tab.key ? "0 1px 3px rgba(0,0,0,.08)" : "none",
+            whiteSpace: "nowrap",
+          }}>
+            {tab.label}
+          </button>
+        ))}
+      </div>
+
+      {/* Right: actions — flex:1 justify-end so center stays centered */}
+      <div style={{ display: "flex", alignItems: "center", gap: 6, flex: 1, justifyContent: "flex-end", flexShrink: 0 }}>
         <Tooltip content={privacy ? "Hide values" : "Show values"}>
           <button onClick={() => setPrivacy(p => !p)} style={{
-            padding: "6px", background: privacy ? "var(--accent)" : "transparent",
+            padding: 6, background: privacy ? "var(--accent)" : "transparent",
             border: "none", borderRadius: "var(--radius)", cursor: "pointer",
             color: "var(--foreground)", display: "flex", alignItems: "center",
           }}
@@ -950,7 +952,6 @@ function SiteHeader({ collapsed, onToggleCollapse, screen, onScreenChange, selec
           </button>
         </Tooltip>
 
-        {/* Theme placeholder */}
         <Tooltip content="Appearance">
           <button style={{ padding: 6, background: "transparent", border: "none", borderRadius: "var(--radius)", cursor: "pointer", color: "var(--foreground)", display: "flex", alignItems: "center" }}
             onMouseEnter={e => e.currentTarget.style.background = "var(--accent)"}
@@ -964,20 +965,12 @@ function SiteHeader({ collapsed, onToggleCollapse, screen, onScreenChange, selec
 
         {/* Ask Fi button */}
         <div style={{ position: "relative", display: "inline-flex", borderRadius: 9 }}>
-          <div style={{
-            position: "absolute", inset: -1, borderRadius: 9,
-            background: C.grad, opacity: .25, filter: "blur(4px)",
-            pointerEvents: "none",
-          }} />
-          <div style={{
-            position: "relative", borderRadius: 9, padding: 1,
-            background: C.grad,
-          }}>
+          <div style={{ position: "absolute", inset: -1, borderRadius: 9, background: C.grad, opacity: .25, filter: "blur(4px)", pointerEvents: "none" }} />
+          <div style={{ position: "relative", borderRadius: 9, padding: 1, background: C.grad }}>
             <button style={{
               display: "flex", alignItems: "center", gap: 6,
               padding: "5px 10px", borderRadius: 8,
-              background: "var(--background)",
-              border: "none", cursor: "pointer",
+              background: "var(--background)", border: "none", cursor: "pointer",
               fontSize: 13, fontWeight: 500, color: "var(--foreground)",
             }}>
               <svg width={16} height={16} viewBox="0 0 24 24" fill="none" stroke="var(--primary)" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><path d="M8 12h8M12 8v8"/></svg>
@@ -986,28 +979,6 @@ function SiteHeader({ collapsed, onToggleCollapse, screen, onScreenChange, selec
             </button>
           </div>
         </div>
-
-        {/* Tabs — only show on screens 1–4 */}
-        {screen >= 1 && (
-          <>
-            <Separator vertical />
-            <div style={{ display: "flex", gap: 1, background: "var(--muted)", borderRadius: "var(--radius)", padding: "3px" }}>
-              {[1,2,3,4].map(n => (
-                <button key={n} onClick={() => onScreenChange(n)} style={{
-                  padding: "4px 10px",
-                  background: screen === n ? "var(--background)" : "transparent",
-                  border: "none", borderRadius: "calc(var(--radius) - 2px)",
-                  fontSize: 12, fontWeight: screen === n ? 600 : 400,
-                  color: screen === n ? "var(--foreground)" : "var(--muted-foreground)",
-                  cursor: "pointer", transition: "background .15s, color .15s",
-                  boxShadow: screen === n ? "0 1px 3px rgba(0,0,0,.08)" : "none",
-                }}>
-                  {n}. {["Open","Upload","Reconcile","Report"][n-1]}
-                </button>
-              ))}
-            </div>
-          </>
-        )}
       </div>
     </header>
   );
@@ -1044,21 +1015,34 @@ function YearSelector({ year, onChange }) {
 function Screen0({ go }) {
   const [search, setSearch] = useState("");
 
-  // Dot component
-  function Dot({ status }) {
-    const filled = status != null;
-    let color;
-    if (status === "reconciled") color = "var(--positive)";
-    else if (status === "needs_attention") color = "var(--destructive)";
-    else if (status === "in_progress" || status === "draft") color = "var(--primary)";
-    else color = "transparent";
-
+  // Figma-faithful dot: filled (16×16 solid) inside 20×20 container, or ring (12×12) inside 20×20
+  function TimelineDot({ status }) {
+    if (status === "reconciled") {
+      return (
+        <div style={{ width: 20, height: 20, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, position: "relative", zIndex: 1 }}>
+          <div style={{ width: 16, height: 16, borderRadius: 9999, background: "#00d188", flexShrink: 0 }} />
+        </div>
+      );
+    }
+    if (status === "needs_attention") {
+      return (
+        <div style={{ width: 20, height: 20, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, position: "relative", zIndex: 1 }}>
+          <div style={{ width: 16, height: 16, borderRadius: 9999, background: "var(--destructive)", flexShrink: 0 }} />
+        </div>
+      );
+    }
+    if (status === "in_progress" || status === "draft") {
+      return (
+        <div style={{ width: 20, height: 20, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, position: "relative", zIndex: 1 }}>
+          <div style={{ width: 16, height: 16, borderRadius: 9999, background: "var(--primary)", flexShrink: 0 }} />
+        </div>
+      );
+    }
+    // null / empty — 12×12 ring with 2px border inside 20×20 container with 4px padding
     return (
-      <div style={{
-        width: 10, height: 10, borderRadius: 99, flexShrink: 0,
-        background: filled ? color : "transparent",
-        border: `1.5px solid ${filled ? color : "var(--border)"}`,
-      }} />
+      <div style={{ width: 20, height: 20, display: "flex", alignItems: "center", justifyContent: "center", padding: 4, flexShrink: 0, position: "relative", zIndex: 1 }}>
+        <div style={{ width: 12, height: 12, borderRadius: 9999, border: "2px solid var(--border)", background: "var(--card)", flexShrink: 0 }} />
+      </div>
     );
   }
 
@@ -1072,12 +1056,20 @@ function Screen0({ go }) {
     return active;
   }
 
-  function BadgeForStatus({ status }) {
+  function StatusBadge({ status }) {
     if (!status) return null;
-    if (status === "needs_attention") return <Badge v="critical">Needs attention</Badge>;
-    if (status === "draft")           return <Badge v="neutral">Draft</Badge>;
-    if (status === "in_progress")     return <Badge v="neutral">In progress</Badge>;
-    if (status === "reconciled")      return <Badge v="positive">Reconciled</Badge>;
+    if (status === "needs_attention") return (
+      <span style={{ display: "inline-flex", alignItems: "center", padding: "2px 8px", borderRadius: 8, fontSize: 12, fontWeight: 600, color: "var(--destructive)", background: "rgba(255,39,95,0.07)", border: "1px solid rgba(255,39,95,0.2)", whiteSpace: "nowrap" }}>Needs attention</span>
+    );
+    if (status === "draft") return (
+      <span style={{ display: "inline-flex", alignItems: "center", padding: "2px 8px", borderRadius: 8, fontSize: 12, fontWeight: 600, color: "var(--primary)", background: "rgba(0,120,255,0.07)", border: "1px solid rgba(0,120,255,0.2)", whiteSpace: "nowrap" }}>Draft</span>
+    );
+    if (status === "in_progress") return (
+      <span style={{ display: "inline-flex", alignItems: "center", padding: "2px 8px", borderRadius: 8, fontSize: 12, fontWeight: 600, color: "var(--primary)", background: "rgba(0,120,255,0.07)", border: "1px solid rgba(0,120,255,0.2)", whiteSpace: "nowrap" }}>In progress</span>
+    );
+    if (status === "reconciled") return (
+      <span style={{ display: "inline-flex", alignItems: "center", padding: "2px 8px", borderRadius: 8, fontSize: 12, fontWeight: 600, color: "#00AD68", background: "rgba(0,209,136,0.09)", border: "1px solid rgba(0,209,136,0.25)", whiteSpace: "nowrap" }}>Reconciled</span>
+    );
     return null;
   }
 
@@ -1085,39 +1077,51 @@ function Screen0({ go }) {
 
   return (
     <div>
-      {/* Page title */}
-      <div style={{ marginBottom: 20 }}>
-        <h1 style={{ fontSize: 20, fontWeight: 700, color: "var(--foreground)", margin: "0 0 4px" }}>Reconciliation</h1>
-        <div style={{ fontSize: 13, color: "var(--muted-foreground)" }}>Manage and reconcile all connected bank accounts</div>
-      </div>
-
-      {/* Toolbar */}
+      {/* Toolbar — Figma: combobox left, search+filter right */}
       <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 16 }}>
-        {/* Filter chip */}
+        {/* Combobox — two-line: label + value */}
         <div style={{
-          display: "inline-flex", alignItems: "center", gap: 5, padding: "5px 10px",
-          background: "var(--accent)", border: "1px solid var(--border)",
-          borderRadius: 999, fontSize: 12, fontWeight: 500, color: "var(--foreground)",
-          cursor: "pointer", flexShrink: 0,
+          display: "inline-flex", alignItems: "center", gap: 8,
+          padding: "6px 12px", minWidth: 200,
+          background: "var(--card)", border: "1px solid var(--border)",
+          borderRadius: 8, cursor: "pointer", flexShrink: 0,
         }}>
-          <span>Assets: Cash &amp; Cash Equivalents</span>
-          <ChevronDown size={12} style={{ color: "var(--muted-foreground)" }} />
+          <div style={{ display: "flex", flexDirection: "column", gap: 1, flex: 1 }}>
+            <span style={{ fontSize: 10, color: "var(--muted-foreground)", fontWeight: 500 }}>Assets: Cash &amp; Cash Equivalents</span>
+            <span style={{ fontSize: 13, fontWeight: 500, color: "var(--foreground)" }}>All</span>
+          </div>
+          <ChevronDown size={14} style={{ color: "var(--muted-foreground)", flexShrink: 0 }} />
         </div>
+
+        {/* Expand icon */}
+        <button style={{
+          width: 36, height: 36, display: "flex", alignItems: "center", justifyContent: "center",
+          background: "transparent", border: "1px solid var(--border)",
+          borderRadius: 8, cursor: "pointer", color: "var(--muted-foreground)",
+          flexShrink: 0, transition: "background .15s",
+        }}
+          onMouseEnter={e => e.currentTarget.style.background = "var(--accent)"}
+          onMouseLeave={e => e.currentTarget.style.background = "transparent"}
+        >
+          <svg width={14} height={14} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+            <path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7"/>
+          </svg>
+        </button>
 
         <div style={{ flex: 1 }} />
 
         {/* Search */}
         <div style={{ position: "relative", display: "flex", alignItems: "center" }}>
-          <Search size={13} style={{ position: "absolute", left: 9, color: "var(--muted-foreground)", pointerEvents: "none" }} />
+          <Search size={13} style={{ position: "absolute", left: 10, color: "var(--muted-foreground)", pointerEvents: "none" }} />
           <input
             value={search}
             onChange={e => setSearch(e.target.value)}
-            placeholder="Search accounts…"
+            placeholder="Search…"
             style={{
-              padding: "6px 10px 6px 28px", width: 220, fontSize: 13,
-              border: "1px solid var(--border)", borderRadius: "var(--radius)",
+              padding: "8px 12px 8px 32px", width: 240, height: 36, fontSize: 13,
+              border: "1px solid var(--border)", borderRadius: 8,
               background: "var(--background)", color: "var(--foreground)",
-              outline: "none", transition: "border-color .15s",
+              outline: "none", transition: "border-color .15s", boxSizing: "border-box",
             }}
             onFocus={e => e.target.style.borderColor = "var(--primary)"}
             onBlur={e => e.target.style.borderColor = "var(--border)"}
@@ -1126,9 +1130,10 @@ function Screen0({ go }) {
 
         {/* Filter icon button */}
         <button style={{
-          padding: 7, background: "transparent", border: "1px solid var(--border)",
-          borderRadius: "var(--radius)", cursor: "pointer", color: "var(--muted-foreground)",
-          display: "flex", alignItems: "center", transition: "background .15s",
+          width: 36, height: 36, display: "flex", alignItems: "center", justifyContent: "center",
+          background: "transparent", border: "1px solid var(--border)",
+          borderRadius: 8, cursor: "pointer", color: "var(--muted-foreground)",
+          flexShrink: 0, transition: "background .15s",
         }}
           onMouseEnter={e => e.currentTarget.style.background = "var(--accent)"}
           onMouseLeave={e => e.currentTarget.style.background = "transparent"}
@@ -1136,23 +1141,7 @@ function Screen0({ go }) {
       </div>
 
       {/* Accounts list */}
-      <Crd style={{ overflow: "hidden" }}>
-        {/* Month header row */}
-        <div style={{
-          display: "grid", gridTemplateColumns: "1fr 320px 200px",
-          padding: "8px 18px", borderBottom: "1px solid var(--border)",
-          background: "var(--muted)",
-        }}>
-          <div style={{ fontSize: 10, fontWeight: 600, color: "var(--muted-foreground)", textTransform: "uppercase", letterSpacing: ".04em" }}>Account</div>
-          <div style={{ display: "flex", justifyContent: "space-between", paddingLeft: 8, paddingRight: 8 }}>
-            {MONTH_LABELS.map(m => (
-              <div key={m} style={{ fontSize: 9, fontWeight: 600, color: "var(--muted-foreground)", textTransform: "uppercase", width: 18, textAlign: "center" }}>{m}</div>
-            ))}
-          </div>
-          <div style={{ fontSize: 10, fontWeight: 600, color: "var(--muted-foreground)", textTransform: "uppercase", letterSpacing: ".04em", textAlign: "right" }}>Reconciled Balance</div>
-        </div>
-
-        {/* Account rows */}
+      <div style={{ display: "flex", flexDirection: "column", gap: 0 }}>
         {filtered.map((acct, idx) => {
           const badgeStatus = accountBadge(acct);
           return (
@@ -1160,39 +1149,48 @@ function Screen0({ go }) {
               key={acct.id}
               onClick={() => go(acct)}
               style={{
-                display: "grid", gridTemplateColumns: "1fr 320px 200px",
-                padding: "14px 18px", cursor: "pointer",
-                borderBottom: idx < filtered.length - 1 ? "1px solid var(--border)" : "none",
-                transition: "background .12s",
+                display: "flex", alignItems: "center", gap: 40,
+                padding: 16, background: "var(--card)",
+                border: "1px solid var(--border)", borderRadius: 10,
+                marginBottom: idx < filtered.length - 1 ? 8 : 0,
+                cursor: "pointer", boxShadow: "0 1px 3px rgba(0,0,0,.04)",
+                transition: "box-shadow .12s, border-color .12s",
               }}
-              onMouseEnter={e => e.currentTarget.style.background = "var(--accent)"}
-              onMouseLeave={e => e.currentTarget.style.background = "transparent"}
+              onMouseEnter={e => { e.currentTarget.style.boxShadow = "0 2px 8px rgba(0,0,0,.08)"; e.currentTarget.style.borderColor = "var(--input)"; }}
+              onMouseLeave={e => { e.currentTarget.style.boxShadow = "0 1px 3px rgba(0,0,0,.04)"; e.currentTarget.style.borderColor = "var(--border)"; }}
             >
-              {/* Left: name + badge */}
-              <div style={{ display: "flex", flexDirection: "column", justifyContent: "center", gap: 4 }}>
-                <div style={{ fontSize: 14, fontWeight: 600, color: "var(--foreground)" }}>{acct.name}</div>
-                <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                  <span style={{ fontSize: 11, color: "var(--muted-foreground)" }}>{acct.currency}</span>
-                  {badgeStatus && <BadgeForStatus status={badgeStatus} />}
+              {/* Col 1: Account name */}
+              <div style={{ flex: "0 0 220px", minWidth: 0 }}>
+                <div style={{ fontSize: 15, fontWeight: 500, color: "var(--foreground)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{acct.name}</div>
+              </div>
+
+              {/* Col 2: Status badge */}
+              <div style={{ flex: "0 0 120px" }}>
+                <StatusBadge status={badgeStatus} />
+              </div>
+
+              {/* Col 3: Timeline — Figma: 416×36 with 2px background track, 20×20 dot frames spaced 36px apart */}
+              <div style={{ flex: 1, position: "relative" }}>
+                {/* Background track — 2px height, at top:9 of dot area */}
+                <div style={{
+                  position: "absolute", left: 10, right: 10, top: 9, height: 2,
+                  background: "var(--border)", borderRadius: 99,
+                }} />
+                {/* Dots + month labels */}
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
+                  {acct.months.map((st, i) => (
+                    <div key={i} style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 4 }}>
+                      <TimelineDot status={st} />
+                      <span style={{ fontSize: 9, color: "var(--muted-foreground)", fontWeight: 500, lineHeight: 1 }}>{MONTH_LABELS[i]}</span>
+                    </div>
+                  ))}
                 </div>
               </div>
 
-              {/* Center: timeline dots */}
-              <div style={{ display: "flex", alignItems: "center", paddingLeft: 8, paddingRight: 8 }}>
-                {acct.months.map((st, i) => (
-                  <div key={i} style={{ flex: 1, display: "flex", alignItems: "center" }}>
-                    {i > 0 && (
-                      <div style={{ flex: 1, height: 1, background: "var(--border)", minWidth: 2 }} />
-                    )}
-                    <Dot status={st} />
-                  </div>
-                ))}
-              </div>
-
-              {/* Right: reconciled balance */}
-              <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", justifyContent: "center", gap: 2 }}>
-                <div style={{ fontSize: 11, fontWeight: 500, color: "var(--muted-foreground)", textTransform: "uppercase", letterSpacing: ".04em" }}>Reconciled balance</div>
-                <div style={{ fontSize: 14, fontWeight: 700, color: "var(--foreground)", fontVariantNumeric: "tabular-nums" }}>
+              {/* Col 4: Reconciled balance */}
+              <div style={{ flex: "0 0 180px", textAlign: "right" }}>
+                <div style={{ fontSize: 11, color: "var(--muted-foreground)", fontWeight: 500, marginBottom: 2 }}>Reconciled balance</div>
+                <div style={{ fontSize: 16, fontWeight: 500, color: "var(--foreground)", fontVariantNumeric: "tabular-nums" }}>
                   {acct.balance != null ? fmtCurrency(acct.balance, acct.currency) : "—"}
                 </div>
               </div>
@@ -1201,11 +1199,11 @@ function Screen0({ go }) {
         })}
 
         {filtered.length === 0 && (
-          <div style={{ padding: "32px 18px", textAlign: "center", color: "var(--muted-foreground)", fontSize: 13 }}>
+          <div style={{ padding: "32px 18px", textAlign: "center", color: "var(--muted-foreground)", fontSize: 13, background: "var(--card)", border: "1px solid var(--border)", borderRadius: 10 }}>
             No accounts match your search.
           </div>
         )}
-      </Crd>
+      </div>
     </div>
   );
 }
