@@ -1,4 +1,9 @@
 import { useState, useRef, useEffect, Component } from "react";
+import {
+  Home, ShoppingBag, ShoppingCart, PieChart, Package, Wallet, Users, Settings,
+  ChevronRight, ChevronDown, PanelLeft, ArrowLeft, MoreVertical, LogOut,
+  Eye, EyeOff, Sun, CreditCard, Layers, Shield, KeyRound, HelpCircle, User, SlidersHorizontal,
+} from "lucide-react";
 
 // ── Error Boundary ─────────────────────────────────────────────────────────
 class ErrorBoundary extends Component {
@@ -24,42 +29,12 @@ function fmtGbp(n, signed) {
   return (n >= 0 ? "+" : "−") + abs;
 }
 
-// ── Icons (inline SVG, matching lucide-react style) ────────────────────────
-function Icon({ d, size = 16, className = "", strokeWidth = 2 }) {
-  return (
-    <svg width={size} height={size} viewBox="0 0 24 24" fill="none"
-      stroke="currentColor" strokeWidth={strokeWidth} strokeLinecap="round" strokeLinejoin="round"
-      className={className}>
-      {Array.isArray(d) ? d.map((path, i) => <path key={i} d={path} />) : <path d={d} />}
-    </svg>
-  );
-}
-const Icons = {
-  home:         "M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z M9 22V12h6v10",
-  shoppingBag:  ["M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z","M3 6h18","M16 10a4 4 0 0 1-8 0"],
-  shoppingCart: ["M9 22c.55 0 1-.45 1-1s-.45-1-1-1-1 .45-1 1 .45 1 1 1z","M20 22c.55 0 1-.45 1-1s-.45-1-1-1-1 .45-1 1 .45 1 1 1z","M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"],
-  pieChart:     ["M21.21 15.89A10 10 0 1 1 8 2.83","M22 12A10 10 0 0 0 12 2v10z"],
-  package:      ["M16.5 9.4l-9-5.19","M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z","M3.27 6.96L12 12.01l8.73-5.05","M12 22.08V12"],
-  wallet:       ["M21 12V7H5a2 2 0 0 1 0-4h14v4","M3 5v14a2 2 0 0 0 2 2h16v-5","M18 12a2 2 0 0 0 0 4h4v-4z"],
-  users:        ["M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2","M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8z","M23 21v-2a4 4 0 0 0-3-3.87","M16 3.13a4 4 0 0 1 0 7.75"],
-  settings:     ["M12 20a8 8 0 1 0 0-16 8 8 0 0 0 0 16z","M12 14a2 2 0 1 0 0-4 2 2 0 0 0 0 4z","M12 2v2","M12 20v2","M4.93 4.93l1.41 1.41","M17.66 17.66l1.41 1.41","M2 12h2","M20 12h2","M4.93 19.07l1.41-1.41","M17.66 6.34l1.41-1.41"],
-  chevronRight: "M9 18l6-6-6-6",
-  chevronDown:  "M6 9l6 6 6-6",
-  panelLeft:    ["M9 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h4","M9 3h11a1 1 0 0 1 1 1v16a1 1 0 0 1-1 1H9","M9 3v18"],
-  arrowLeft:    "M19 12H5 M12 19l-7-7 7-7",
-  moreVertical: ["M12 13a1 1 0 1 0 0-2 1 1 0 0 0 0 2z","M12 6a1 1 0 1 0 0-2 1 1 0 0 0 0 2z","M12 20a1 1 0 1 0 0-2 1 1 0 0 0 0 2z"],
-  logOut:       ["M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4","M16 17l5-5-5-5","M21 12H9"],
-  eye:          ["M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z","M12 9a3 3 0 1 0 0 6 3 3 0 0 0 0-6z"],
-  eyeOff:       ["M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94","M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19","M1 1l22 22","M14.12 14.12A3 3 0 1 1 9.88 9.88"],
-  sun:          ["M12 17a5 5 0 1 0 0-10 5 5 0 0 0 0 10z","M12 1v2","M12 21v2","M4.22 4.22l1.42 1.42","M18.36 18.36l1.42 1.42","M1 12h2","M21 12h2","M4.22 19.78l1.42-1.42","M18.36 5.64l1.42-1.42"],
-  creditCard:   ["M1 4h22v16H1z","M1 10h22"],
-  layers:       ["M12 2L2 7l10 5 10-5-10-5z","M2 17l10 5 10-5","M2 12l10 5 10-5"],
-  shield:       "M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z",
-  key:          ["M21 2l-2 2m-7.61 7.61a5.5 5.5 0 1 1-7.778 7.778 5.5 5.5 0 0 1 7.777-7.777zm0 0L15.5 7.5m0 0l3 3L22 7l-3-3m-3.5 3.5L19 4"],
-  helpCircle:   ["M12 22a10 10 0 1 0 0-20 10 10 0 0 0 0 20z","M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3","M12 17h.01"],
-  user:         ["M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2","M12 3a4 4 0 1 0 0 8 4 4 0 0 0 0-8z"],
-  sliders:      ["M4 21v-7","M4 10V3","M12 21v-9","M12 8V3","M20 21v-5","M20 12V3","M1 14h6","M9 8h6","M17 16h6"],
-  fi:           "M12 2a10 10 0 1 0 0 20A10 10 0 0 0 12 2z M8 12h8 M12 8v8",
+// ── Icons — lucide-react wrapper ────────────────────────────────────────────
+// Use lucide components directly: <ChevronRight size={14} /> etc.
+// Icons map for sidebar nav (keyed by nav item icon string)
+const NavIcons = {
+  home: Home, shoppingBag: ShoppingBag, shoppingCart: ShoppingCart,
+  pieChart: PieChart, package: Package, wallet: Wallet, users: Users,
 };
 
 // ── Design tokens (CSS var references, matching globals.css) ──────────────
@@ -188,22 +163,28 @@ function Separator({ vertical }) {
 
 // ── Tooltip ────────────────────────────────────────────────────────────────
 function Tooltip({ content, children, side = "top" }) {
-  const [vis, setVis] = useState(false);
+  const [pos, setPos] = useState(null);
+  const ref = useRef(null);
+  function show() {
+    if (!ref.current) return;
+    const r = ref.current.getBoundingClientRect();
+    setPos({ x: r.left + r.width / 2, y: side === "top" ? r.top : r.bottom });
+  }
   return (
-    <div style={{ position: "relative", display: "inline-flex" }}
-      onMouseEnter={() => setVis(true)} onMouseLeave={() => setVis(false)}>
+    <div ref={ref} style={{ position: "relative", display: "inline-flex" }}
+      onMouseEnter={show} onMouseLeave={() => setPos(null)}>
       {children}
-      {vis && (
+      {pos && (
         <div style={{
-          position: "absolute",
-          ...(side === "top" ? { bottom: "calc(100% + 8px)" } : { top: "calc(100% + 8px)" }),
-          left: "50%", transform: "translateX(-50%)",
-          zIndex: 300,
+          position: "fixed",
+          left: pos.x, top: side === "top" ? pos.y - 8 : pos.y + 8,
+          transform: side === "top" ? "translate(-50%, -100%)" : "translate(-50%, 0%)",
+          zIndex: 9999,
           background: "var(--tooltip)", color: "var(--tooltip-foreground)",
           borderRadius: "var(--radius)", padding: "6px 10px",
           fontSize: 12, fontWeight: 500,
           boxShadow: "0 4px 16px rgba(0,0,0,.15)",
-          pointerEvents: "none", whiteSpace: "nowrap",
+          pointerEvents: "none",
         }}>
           {content}
         </div>
@@ -393,8 +374,9 @@ function ConfBox({ item, onAccept, onUpdate, onResolveUpdated, onDismissBoth }) 
     );
   }
 
-  // Duplicate — two competing ledger candidates for one statement entry
+  // Duplicate — N competing ledger candidates for one statement entry
   if (item.type === "Duplicate") {
+    const candidates = item.candidates || [item.L];
     return (
       <div style={{
         width: "100%", padding: "10px", borderRadius: "calc(var(--radius) + 4px)",
@@ -411,25 +393,16 @@ function ConfBox({ item, onAccept, onUpdate, onResolveUpdated, onDismissBoth }) 
           <Badge v="warning" xs>Duplicate</Badge>
         </div>
         <div style={{ fontSize: 10, color: "var(--muted-foreground)", textAlign: "center", lineHeight: 1.4 }}>
-          2 ledger entries · 1 statement line
+          {candidates.length} ledger entries · 1 statement line
         </div>
-        <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
-          <button onClick={e => { e.stopPropagation(); onAccept(item, "L"); }} style={{
-            width: "100%", padding: "5px 6px", background: "transparent",
-            color: "var(--positive)", border: "1px solid rgba(0,232,157,.4)",
-            borderRadius: "var(--radius)", fontSize: 11, fontWeight: 600, cursor: "pointer",
-          }}>✓ Use Top</button>
-          <button onClick={e => { e.stopPropagation(); onAccept(item, "L2"); }} style={{
-            width: "100%", padding: "5px 6px", background: "transparent",
-            color: "var(--primary)", border: "1px solid rgba(0,120,255,.35)",
-            borderRadius: "var(--radius)", fontSize: 11, fontWeight: 600, cursor: "pointer",
-          }}>✓ Use Bottom</button>
-          <button onClick={e => { e.stopPropagation(); onDismissBoth(item); }} style={{
-            width: "100%", padding: "5px 6px", background: "transparent",
-            color: "var(--muted-foreground)", border: "1px solid var(--border)",
-            borderRadius: "var(--radius)", fontSize: 11, fontWeight: 600, cursor: "pointer",
-          }}>✕ Dismiss Both</button>
+        <div style={{ fontSize: 10, color: "var(--muted-foreground)", textAlign: "center" }}>
+          Click a card to use it
         </div>
+        <button onClick={e => { e.stopPropagation(); onDismissBoth(item); }} style={{
+          width: "100%", padding: "5px 6px", background: "transparent",
+          color: "var(--muted-foreground)", border: "1px solid var(--border)",
+          borderRadius: "var(--radius)", fontSize: 11, fontWeight: 600, cursor: "pointer",
+        }}>✕ Dismiss All</button>
       </div>
     );
   }
@@ -575,7 +548,19 @@ const INIT_ATTENTION = [
   { id:"a2", L:{ d:"26 Jun", n:"STRIPE PAYOUT", a:8943.22, cat:"Payment Processing" }, R:{ d:"26 Jun", n:"STRIPE PAYMENTS UK", a:9000 }, conf:82, type:"Amount diff", ex:"Gross vs net payout. £56.78 = Stripe processing fee.", at:"accept", aiSuggested:true },
   { id:"a3", L:{ d:"25 Jun", n:"PAYMENT – SMITH & CO", a:-3200, cat:"Supplier Payments" }, R:{ d:"25 Jun", n:"SMITH AND COMPANY LTD", a:-3200 }, conf:92, type:"Name variant", ex:"Same legal entity — abbreviated name in ledger vs full registered name on statement.", at:"accept", aiSuggested:true },
   { id:"a4", L:{ d:"24 Jun", n:"DD – HMRC VAT Q2", a:-4812, cat:"Tax Payments" }, R:{ d:"24 Jun", n:"HMRC VAT", a:-4812.5 }, conf:68, type:"Amount diff", ex:"50p rounding difference. Likely a currency rounding issue on HMRC's side.", at:"review", aiSuggested:true },
-  { id:"dup1", L:{ d:"27 Jun", n:"STRIPE PAYOUT", a:8943.22, cat:"Payment Processing" }, L2:{ d:"27 Jun", n:"STRIPE TRANSFER", a:8943.22, cat:"Payment Processing" }, R:{ d:"27 Jun", n:"STRIPE PAYMENTS UK", a:8943.22 }, conf:74, type:"Duplicate", ex:"Two ledger entries share the same amount and date as one bank statement line. Pick the correct one to match, or dismiss both.", aiSuggested:true },
+  { id:"dup1",
+    candidates:[
+      { d:"27 Jun", n:"STRIPE PAYOUT",          a:8943.22, cat:"Payment Processing" },
+      { d:"27 Jun", n:"STRIPE TRANSFER",         a:8943.22, cat:"Payment Processing" },
+      { d:"26 Jun", n:"STRIPE PAYOUT – REPOST",  a:8943.22, cat:"Payment Processing" },
+      { d:"27 Jun", n:"STRIPE NET SETTLEMENT",   a:8943.22, cat:"Payment Processing" },
+      { d:"28 Jun", n:"STRIPE PAYOUT ADJUSTED",  a:8943.22, cat:"Payment Processing" },
+    ],
+    L:{ d:"27 Jun", n:"STRIPE PAYOUT", a:8943.22, cat:"Payment Processing" },
+    R:{ d:"27 Jun", n:"STRIPE PAYMENTS UK", a:8943.22 },
+    conf:74, type:"Duplicate",
+    ex:"5 ledger entries share the same amount as one bank statement line. Pick the correct one to match, or dismiss all.",
+    aiSuggested:true },
   { id:"o1", L:null, R:{ d:"30 Jun", n:"BANK SERVICE CHARGE", a:-35 }, conf:null, type:null, ex:null, at:null, aiSuggested:false },
   { id:"o2", L:null, R:{ d:"29 Jun", n:"CARD MACHINE RENTAL", a:-15 }, conf:null, type:null, ex:null, at:null, aiSuggested:false },
 ];
@@ -682,10 +667,10 @@ function Sidebar({ collapsed, onToggle }) {
                   onMouseEnter={e => { if (!hasActive) e.currentTarget.style.background = "var(--sidebar-accent)"; }}
                   onMouseLeave={e => { if (!hasActive) e.currentTarget.style.background = "transparent"; }}
                 >
-                  <Icon d={Icons[item.icon]} size={16} />
+                  {NavIcons[item.icon] && (() => { const NavIcon = NavIcons[item.icon]; return <NavIcon size={16} />; })()}
                   {!collapsed && <span style={{ flex: 1 }}>{item.label}</span>}
                   {!collapsed && item.sub && (
-                    <Icon d={Icons.chevronRight} size={14} style={{ transition: "transform .2s", transform: isOpen ? "rotate(90deg)" : "none" }} />
+                    <ChevronRight size={14} style={{ transition: "transform .2s", transform: isOpen ? "rotate(90deg)" : "none" }} />
                   )}
                 </button>
               </Tooltip>
@@ -728,7 +713,7 @@ function Sidebar({ collapsed, onToggle }) {
             onMouseEnter={e => e.currentTarget.style.background = "var(--sidebar-accent)"}
             onMouseLeave={e => e.currentTarget.style.background = "transparent"}
           >
-            <Icon d={Icons.settings} size={16} />
+            <Settings size={16} />
             {!collapsed && <span>Settings</span>}
           </button>
         </Tooltip>
@@ -755,23 +740,23 @@ function Sidebar({ collapsed, onToggle }) {
                     <div style={{ fontSize: 13, fontWeight: 500, color: "var(--sidebar-foreground)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>Acme Corp</div>
                     <div style={{ fontSize: 11, color: "var(--muted-foreground)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>Alina</div>
                   </div>
-                  <Icon d={Icons.moreVertical} size={14} />
+                  <MoreVertical size={14} />
                 </>
               )}
             </button>
           }
           items={[
             { label: "Company" },
-            { icon: <Icon d={Icons.creditCard} size={14} />, text: "Subscriptions & Billing" },
-            { icon: <Icon d={Icons.layers} size={14} />, text: "Integrations" },
-            { icon: <Icon d={Icons.shield} size={14} />, text: "External Access" },
-            { icon: <Icon d={Icons.helpCircle} size={14} />, text: "Get Help" },
+            { icon: <CreditCard size={14} />, text: "Subscriptions & Billing" },
+            { icon: <Layers size={14} />, text: "Integrations" },
+            { icon: <Shield size={14} />, text: "External Access" },
+            { icon: <HelpCircle size={14} />, text: "Get Help" },
             { separator: true },
             { label: "Account" },
-            { icon: <Icon d={Icons.user} size={14} />, text: "Profile Settings" },
-            { icon: <Icon d={Icons.sliders} size={14} />, text: "Preferences" },
+            { icon: <User size={14} />, text: "Profile Settings" },
+            { icon: <SlidersHorizontal size={14} />, text: "Preferences" },
             { separator: true },
-            { icon: <Icon d={Icons.logOut} size={14} />, text: "Log out", danger: true },
+            { icon: <LogOut size={14} />, text: "Log out", danger: true },
           ]}
         />
       </div>
@@ -811,7 +796,7 @@ function SiteHeader({ collapsed, onToggleCollapse, screen, onScreenChange }) {
           onMouseEnter={e => e.currentTarget.style.background = "var(--accent)"}
           onMouseLeave={e => e.currentTarget.style.background = "transparent"}
         >
-          <Icon d={Icons.panelLeft} size={18} />
+          <PanelLeft size={18} />
         </button>
 
         <Separator vertical />
@@ -823,10 +808,10 @@ function SiteHeader({ collapsed, onToggleCollapse, screen, onScreenChange }) {
             onMouseEnter={e => e.currentTarget.style.color = "var(--foreground)"}
             onMouseLeave={e => e.currentTarget.style.color = "var(--muted-foreground)"}
           >
-            <Icon d={Icons.arrowLeft} size={15} />
+            <ArrowLeft size={15} />
             <span style={{ fontSize: 14 }}>{breadcrumbs[0].label}</span>
           </a>
-          <Icon d={Icons.chevronRight} size={14} style={{ color: "var(--muted-foreground)", flexShrink: 0 }} />
+          <ChevronRight size={14} style={{ color: "var(--muted-foreground)", flexShrink: 0 }} />
           <span style={{ fontSize: 14, fontWeight: 600, color: "var(--foreground)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
             {breadcrumbs[1].label}
           </span>
@@ -849,7 +834,7 @@ function SiteHeader({ collapsed, onToggleCollapse, screen, onScreenChange }) {
             onMouseEnter={e => e.currentTarget.style.background = "var(--accent)"}
             onMouseLeave={e => { if (!privacy) e.currentTarget.style.background = "transparent"; }}
           >
-            <Icon d={privacy ? Icons.eyeOff : Icons.eye} size={16} />
+            {privacy ? <EyeOff size={16} /> : <Eye size={16} />}
           </button>
         </Tooltip>
 
@@ -859,7 +844,7 @@ function SiteHeader({ collapsed, onToggleCollapse, screen, onScreenChange }) {
             onMouseEnter={e => e.currentTarget.style.background = "var(--accent)"}
             onMouseLeave={e => e.currentTarget.style.background = "transparent"}
           >
-            <Icon d={Icons.sun} size={16} />
+            <Sun size={16} />
           </button>
         </Tooltip>
 
@@ -883,7 +868,7 @@ function SiteHeader({ collapsed, onToggleCollapse, screen, onScreenChange }) {
               border: "none", cursor: "pointer",
               fontSize: 13, fontWeight: 500, color: "var(--foreground)",
             }}>
-              <Icon d={Icons.fi} size={16} style={{ color: "var(--primary)" }} />
+              <svg width={16} height={16} viewBox="0 0 24 24" fill="none" stroke="var(--primary)" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><path d="M8 12h8M12 8v8"/></svg>
               <span>Ask Fi</span>
               <div style={{ padding: "1px 5px", background: "var(--muted)", border: "1px solid var(--border)", borderRadius: 4, fontSize: 11, fontWeight: 600 }}>/</div>
             </button>
@@ -1165,9 +1150,9 @@ function Screen3({ go }) {
     flash("Resolved: " + (item.R?.n || "item"));
   }
 
-  // Duplicate: pick one candidate (which = "L" | "L2"), dismiss the other
-  function pickCandidate(item, which) {
-    const chosenL = which === "L2" ? item.L2 : item.L;
+  // Duplicate: pick one candidate by index, dismiss the rest
+  function pickCandidate(item, idx) {
+    const chosenL = (item.candidates || [item.L])[idx];
     setAttention(p => p.filter(a => a.id !== item.id));
     setResolved(p => [{ id: item.id, L: chosenL, R: item.R, how: "Duplicate resolved" }, ...p]);
     setResolvedOpen(true);
@@ -1175,7 +1160,7 @@ function Screen3({ go }) {
     flash("Resolved: " + (chosenL?.n || "item"));
   }
 
-  // Duplicate: dismiss both candidates, handle independently
+  // Duplicate: dismiss all candidates, handle independently
   function dismissBoth(item) {
     setAttention(p => p.filter(a => a.id !== item.id));
     setResolved(p => [{ id: item.id, L: null, R: item.R, how: "Dismissed (both)" }, ...p]);
@@ -1283,12 +1268,32 @@ function Screen3({ go }) {
                   return (
                     <div key={item.id} style={{ display: "grid", gridTemplateColumns: "1fr 180px 1fr", gap: 8 }}>
                       {/* Left: Ledger side */}
-                      {item.type === "Duplicate" && item.L && item.L2
+                      {item.type === "Duplicate" && item.candidates?.length
                         ? (
                           <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
-                            <LedgerItem item={item.L} checked={selL.includes(item.id)} onCheck={() => toggleSelL(item.id)} onEdit={() => setEditTarget(item)} />
-                            <div style={{ fontSize: 10, fontWeight: 600, color: "var(--muted-foreground)", textAlign: "center", textTransform: "uppercase", letterSpacing: ".05em" }}>vs</div>
-                            <LedgerItem item={item.L2} checked={false} onCheck={() => {}} onEdit={() => setEditTarget({ ...item, L: item.L2, _editL2: true })} />
+                            {item.candidates.map((c, i) => (
+                              <div key={i}>
+                                {i > 0 && <div style={{ fontSize: 10, fontWeight: 600, color: "var(--muted-foreground)", textAlign: "center", textTransform: "uppercase", letterSpacing: ".05em", padding: "2px 0" }}>vs</div>}
+                                <Crd style={{ padding: "10px 12px" }}>
+                                  <div style={{ display: "flex", alignItems: "flex-start", gap: 8 }}>
+                                    <div style={{ flex: 1, minWidth: 0 }}>
+                                      <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 2 }}>
+                                        <span style={{ fontSize: 11, color: "var(--muted-foreground)" }}>{c.d}</span>
+                                        <Amt a={c.a} sm />
+                                      </div>
+                                      <div style={{ fontSize: 13, fontWeight: 600, color: "var(--foreground)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{c.n}</div>
+                                      {c.cat && <div style={{ fontSize: 11, color: "var(--muted-foreground)", marginTop: 1 }}>{c.cat}</div>}
+                                    </div>
+                                    <button onClick={e => { e.stopPropagation(); pickCandidate(item, i); }} style={{
+                                      flexShrink: 0, padding: "4px 8px",
+                                      background: "var(--positive)", color: "#fff",
+                                      border: "none", borderRadius: "var(--radius)",
+                                      fontSize: 11, fontWeight: 600, cursor: "pointer", whiteSpace: "nowrap",
+                                    }}>✓ Use</button>
+                                  </div>
+                                </Crd>
+                              </div>
+                            ))}
                           </div>
                         )
                         : item.L
@@ -1461,6 +1466,7 @@ export default function App() {
 
         *, *::before, *::after { box-sizing: border-box; }
         body { margin: 0; font-family: Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; }
+        button, input, select, textarea { font-family: inherit; }
         @keyframes spin { to { transform: rotate(360deg); } }
 
         /* Fiskl globals.css tokens */
@@ -1469,21 +1475,15 @@ export default function App() {
           --foreground: oklch(0.1993 0.0541 272.68);
           --card: oklch(1 0 0);
           --card-foreground: oklch(0.1993 0.0541 272.68);
-          --popover: oklch(1 0 0);
-          --popover-foreground: oklch(0.1993 0.0541 272.68);
           --primary: oklch(60.06% 0.2248 257.64);
           --primary-foreground: oklch(0.9659 0.0209 227.52);
-          --secondary: oklch(0.967 0.021 224.742);
-          --secondary-foreground: oklch(0.204 0.051 272.656);
           --muted: oklch(0.9774 0.0042 236.5);
           --muted-foreground: oklch(0.5299 0.0425 263.39);
           --accent: oklch(0.9493 0.0103 247.94);
           --accent-foreground: oklch(0.1993 0.0541 272.68);
           --destructive: oklch(0.6537 0.2329 21.74);
-          --destructive-foreground: oklch(0.9594 0.0267 340.85);
           --border: oklch(0.9283 0.0055 274.96);
           --input: oklch(0.8368 0.0305 262.52);
-          --ring: oklch(60.06% 0.2248 257.64);
           --warning: oklch(0.6804 0.214 39.54);
           --warning-foreground: oklch(0.9482 0.037 68.66);
           --positive: oklch(0.6895 0.1494 162.47);
@@ -1493,7 +1493,6 @@ export default function App() {
           --sidebar: oklch(0.9846 0.0017 247.84);
           --sidebar-foreground: oklch(0.3063 0.0588 271.91);
           --sidebar-primary: oklch(0.598 0.22 257.871);
-          --sidebar-primary-foreground: oklch(1 0 89.876);
           --sidebar-accent: oklch(0.967 0.0029 264.54);
           --sidebar-accent-foreground: oklch(0.1993 0.0541 272.68);
           --sidebar-border: oklch(0.9283 0.0055 274.96);
