@@ -1,0 +1,1530 @@
+import { useState, useRef, useEffect, Component } from "react";
+
+// ── Error Boundary ─────────────────────────────────────────────────────────
+class ErrorBoundary extends Component {
+  constructor(props) { super(props); this.state = { error: null }; }
+  static getDerivedStateFromError(e) { return { error: e }; }
+  render() {
+    if (this.state.error) return (
+      <div style={{ padding: 40, fontFamily: "monospace", color: "var(--destructive)" }}>
+        <h2>Error</h2><pre>{this.state.error.toString()}</pre>
+      </div>
+    );
+    return this.props.children;
+  }
+}
+
+// ── Helpers ────────────────────────────────────────────────────────────────
+function cn(...args) {
+  return args.filter(Boolean).join(" ");
+}
+function fmtGbp(n, signed) {
+  var abs = "£" + Math.abs(n).toLocaleString("en-GB", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  if (!signed) return (n < 0 ? "−" : "") + abs;
+  return (n >= 0 ? "+" : "−") + abs;
+}
+
+// ── Icons (inline SVG, matching lucide-react style) ────────────────────────
+function Icon({ d, size = 16, className = "", strokeWidth = 2 }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none"
+      stroke="currentColor" strokeWidth={strokeWidth} strokeLinecap="round" strokeLinejoin="round"
+      className={className}>
+      {Array.isArray(d) ? d.map((path, i) => <path key={i} d={path} />) : <path d={d} />}
+    </svg>
+  );
+}
+const Icons = {
+  home:         "M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z M9 22V12h6v10",
+  shoppingBag:  ["M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z","M3 6h18","M16 10a4 4 0 0 1-8 0"],
+  shoppingCart: ["M9 22c.55 0 1-.45 1-1s-.45-1-1-1-1 .45-1 1 .45 1 1 1z","M20 22c.55 0 1-.45 1-1s-.45-1-1-1-1 .45-1 1 .45 1 1 1z","M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"],
+  pieChart:     ["M21.21 15.89A10 10 0 1 1 8 2.83","M22 12A10 10 0 0 0 12 2v10z"],
+  package:      ["M16.5 9.4l-9-5.19","M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z","M3.27 6.96L12 12.01l8.73-5.05","M12 22.08V12"],
+  wallet:       ["M21 12V7H5a2 2 0 0 1 0-4h14v4","M3 5v14a2 2 0 0 0 2 2h16v-5","M18 12a2 2 0 0 0 0 4h4v-4z"],
+  users:        ["M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2","M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8z","M23 21v-2a4 4 0 0 0-3-3.87","M16 3.13a4 4 0 0 1 0 7.75"],
+  settings:     ["M12 20a8 8 0 1 0 0-16 8 8 0 0 0 0 16z","M12 14a2 2 0 1 0 0-4 2 2 0 0 0 0 4z","M12 2v2","M12 20v2","M4.93 4.93l1.41 1.41","M17.66 17.66l1.41 1.41","M2 12h2","M20 12h2","M4.93 19.07l1.41-1.41","M17.66 6.34l1.41-1.41"],
+  chevronRight: "M9 18l6-6-6-6",
+  chevronDown:  "M6 9l6 6 6-6",
+  panelLeft:    ["M9 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h4","M9 3h11a1 1 0 0 1 1 1v16a1 1 0 0 1-1 1H9","M9 3v18"],
+  arrowLeft:    "M19 12H5 M12 19l-7-7 7-7",
+  moreVertical: ["M12 13a1 1 0 1 0 0-2 1 1 0 0 0 0 2z","M12 6a1 1 0 1 0 0-2 1 1 0 0 0 0 2z","M12 20a1 1 0 1 0 0-2 1 1 0 0 0 0 2z"],
+  logOut:       ["M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4","M16 17l5-5-5-5","M21 12H9"],
+  eye:          ["M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z","M12 9a3 3 0 1 0 0 6 3 3 0 0 0 0-6z"],
+  eyeOff:       ["M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94","M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19","M1 1l22 22","M14.12 14.12A3 3 0 1 1 9.88 9.88"],
+  sun:          ["M12 17a5 5 0 1 0 0-10 5 5 0 0 0 0 10z","M12 1v2","M12 21v2","M4.22 4.22l1.42 1.42","M18.36 18.36l1.42 1.42","M1 12h2","M21 12h2","M4.22 19.78l1.42-1.42","M18.36 5.64l1.42-1.42"],
+  creditCard:   ["M1 4h22v16H1z","M1 10h22"],
+  layers:       ["M12 2L2 7l10 5 10-5-10-5z","M2 17l10 5 10-5","M2 12l10 5 10-5"],
+  shield:       "M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z",
+  key:          ["M21 2l-2 2m-7.61 7.61a5.5 5.5 0 1 1-7.778 7.778 5.5 5.5 0 0 1 7.777-7.777zm0 0L15.5 7.5m0 0l3 3L22 7l-3-3m-3.5 3.5L19 4"],
+  helpCircle:   ["M12 22a10 10 0 1 0 0-20 10 10 0 0 0 0 20z","M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3","M12 17h.01"],
+  user:         ["M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2","M12 3a4 4 0 1 0 0 8 4 4 0 0 0 0-8z"],
+  sliders:      ["M4 21v-7","M4 10V3","M12 21v-9","M12 8V3","M20 21v-5","M20 12V3","M1 14h6","M9 8h6","M17 16h6"],
+  fi:           "M12 2a10 10 0 1 0 0 20A10 10 0 0 0 12 2z M8 12h8 M12 8v8",
+};
+
+// ── Design tokens (CSS var references, matching globals.css) ──────────────
+// Used only where inline styles are necessary; prefer CSS vars via style attr
+const C = {
+  grad: "linear-gradient(92deg,#0058FF 0%,#00B4FF 45%,#00E0A0 100%)",
+};
+
+// ── Base UI Components ─────────────────────────────────────────────────────
+
+function Amt({ a, sm }) {
+  return (
+    <span style={{
+      fontWeight: 600,
+      color: a > 0 ? "var(--positive)" : "var(--foreground)",
+      fontVariantNumeric: "tabular-nums",
+      fontFeatureSettings: "'tnum'",
+      fontSize: sm ? 12 : 14,
+    }}>
+      {fmtGbp(a)}
+    </span>
+  );
+}
+
+function Badge({ v = "neutral", xs, children }) {
+  const map = {
+    positive: { bg: "rgba(0,232,157,0.12)", c: "var(--positive)", b: "rgba(0,232,157,0.3)" },
+    neutral:  { bg: "rgba(0,120,255,0.08)", c: "var(--primary)",  b: "rgba(0,120,255,0.25)" },
+    warning:  { bg: "rgba(255,89,5,0.08)",  c: "var(--warning)",  b: "rgba(255,89,5,0.25)" },
+    critical: { bg: "rgba(255,39,95,0.08)", c: "var(--destructive)", b: "rgba(255,39,95,0.25)" },
+    ai:       { bg: "rgba(0,120,255,0.08)", c: "var(--primary)",  b: "rgba(0,120,255,0.25)" },
+  };
+  const s = map[v] || map.neutral;
+  return (
+    <span style={{
+      display: "inline-flex", alignItems: "center",
+      padding: xs ? "1px 6px" : "2px 8px",
+      borderRadius: 999,
+      fontSize: xs ? 10 : 11, fontWeight: 600,
+      background: s.bg, color: s.c, border: `1px solid ${s.b}`,
+      whiteSpace: "nowrap",
+    }}>
+      {children}
+    </span>
+  );
+}
+
+function Btn({ onClick, disabled, grad, outline, blue, sm, xs, children }) {
+  if (grad) return (
+    <button onClick={onClick} disabled={disabled} style={{
+      display: "inline-flex", alignItems: "center", gap: 6,
+      padding: sm ? "6px 14px" : xs ? "4px 10px" : "8px 20px",
+      background: disabled ? "var(--muted)" : C.grad,
+      color: disabled ? "var(--muted-foreground)" : "#fff",
+      border: "none", borderRadius: "var(--radius)",
+      fontSize: sm ? 13 : xs ? 11 : 14, fontWeight: 600,
+      cursor: disabled ? "not-allowed" : "pointer",
+    }}>
+      {children}
+    </button>
+  );
+  if (outline) return (
+    <button onClick={onClick} style={{
+      display: "inline-flex", alignItems: "center", gap: 6,
+      padding: sm ? "6px 12px" : xs ? "3px 8px" : "8px 18px",
+      background: "transparent",
+      color: blue ? "var(--primary)" : "var(--foreground)",
+      border: `1px solid ${blue ? "var(--primary)" : "var(--border)"}`,
+      borderRadius: "var(--radius)",
+      fontSize: sm ? 12 : xs ? 11 : 13, fontWeight: 500, cursor: "pointer",
+    }}>
+      {children}
+    </button>
+  );
+  return (
+    <button onClick={onClick} style={{
+      display: "inline-flex", alignItems: "center", gap: 4,
+      padding: "4px 8px", background: "transparent",
+      color: "var(--primary)", border: "none",
+      borderRadius: "var(--radius)", fontSize: 13, fontWeight: 500, cursor: "pointer",
+    }}>
+      {children}
+    </button>
+  );
+}
+
+function Crd({ children, style, onClick }) {
+  return (
+    <div onClick={onClick} style={Object.assign({
+      background: "var(--card)",
+      border: "1px solid var(--border)",
+      borderRadius: "calc(var(--radius) + 4px)",
+    }, style || {})}>
+      {children}
+    </div>
+  );
+}
+
+function SumRow({ items }) {
+  return (
+    <div style={{ display: "flex", gap: 2, padding: "10px 0" }}>
+      {items.map((it, i) => (
+        <div key={i} style={{
+          flex: 1, padding: "10px 16px",
+          background: it.cr ? "rgba(255,39,95,.03)" : "var(--card)",
+          borderRadius: "var(--radius)",
+          border: `1px solid ${it.cr ? "rgba(255,39,95,.15)" : "var(--border)"}`,
+        }}>
+          <div style={{ fontSize: 10, fontWeight: 600, color: "var(--muted-foreground)", textTransform: "uppercase", letterSpacing: ".06em", marginBottom: 3 }}>{it.label}</div>
+          <div style={{ fontSize: 17, fontWeight: 700, color: it.cr ? "var(--destructive)" : it.pos ? "var(--positive)" : "var(--foreground)" }}>{it.value}</div>
+          {it.sub && <div style={{ fontSize: 11, color: "var(--muted-foreground)", marginTop: 1 }}>{it.sub}</div>}
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function Separator({ vertical }) {
+  return (
+    <div style={vertical
+      ? { width: 1, height: 16, background: "var(--border)", flexShrink: 0 }
+      : { height: 1, background: "var(--border)", margin: "4px 0" }
+    } />
+  );
+}
+
+// ── Tooltip ────────────────────────────────────────────────────────────────
+function Tooltip({ content, children, side = "top" }) {
+  const [vis, setVis] = useState(false);
+  return (
+    <div style={{ position: "relative", display: "inline-flex" }}
+      onMouseEnter={() => setVis(true)} onMouseLeave={() => setVis(false)}>
+      {children}
+      {vis && (
+        <div style={{
+          position: "absolute",
+          ...(side === "top" ? { bottom: "calc(100% + 8px)" } : { top: "calc(100% + 8px)" }),
+          left: "50%", transform: "translateX(-50%)",
+          zIndex: 300,
+          background: "var(--tooltip)", color: "var(--tooltip-foreground)",
+          borderRadius: "var(--radius)", padding: "6px 10px",
+          fontSize: 12, fontWeight: 500,
+          boxShadow: "0 4px 16px rgba(0,0,0,.15)",
+          pointerEvents: "none", whiteSpace: "nowrap",
+        }}>
+          {content}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ── Dropdown Menu ──────────────────────────────────────────────────────────
+function DropdownMenu({ trigger, items, align = "end" }) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef(null);
+  useEffect(() => {
+    function handle(e) { if (ref.current && !ref.current.contains(e.target)) setOpen(false); }
+    document.addEventListener("mousedown", handle);
+    return () => document.removeEventListener("mousedown", handle);
+  }, []);
+  return (
+    <div ref={ref} style={{ position: "relative", display: "inline-flex" }}>
+      <div onClick={() => setOpen(o => !o)}>{trigger}</div>
+      {open && (
+        <div style={{
+          position: "absolute",
+          ...(align === "end" ? { right: 0 } : { left: 0 }),
+          bottom: "calc(100% + 4px)",
+          zIndex: 200, minWidth: 220,
+          background: "var(--popover)", color: "var(--popover-foreground)",
+          border: "1px solid var(--border)",
+          borderRadius: "calc(var(--radius) + 2px)",
+          boxShadow: "0 8px 24px rgba(0,0,0,.12)",
+          padding: "4px",
+          overflow: "hidden",
+        }}>
+          {items.map((item, i) => {
+            if (item.separator) return <Separator key={i} />;
+            if (item.label && !item.onClick) return (
+              <div key={i} style={{ padding: "6px 8px", fontSize: 11, fontWeight: 600, color: "var(--muted-foreground)", textTransform: "uppercase", letterSpacing: ".05em" }}>{item.label}</div>
+            );
+            return (
+              <button key={i} onClick={() => { item.onClick?.(); setOpen(false); }} style={{
+                display: "flex", alignItems: "center", gap: 8,
+                width: "100%", padding: "7px 8px",
+                background: "transparent",
+                color: item.danger ? "var(--destructive)" : "var(--foreground)",
+                border: "none", borderRadius: "calc(var(--radius) - 2px)",
+                fontSize: 13, fontWeight: 400, cursor: "pointer",
+                textAlign: "left",
+              }}
+                onMouseEnter={e => e.currentTarget.style.background = "var(--accent)"}
+                onMouseLeave={e => e.currentTarget.style.background = "transparent"}
+              >
+                {item.icon && <span style={{ color: item.danger ? "var(--destructive)" : "var(--muted-foreground)", display: "flex" }}>{item.icon}</span>}
+                {item.text}
+              </button>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ── Edit Modal ─────────────────────────────────────────────────────────────
+function EditModal({ tx, onSave, onClose }) {
+  const [form, setForm] = useState({ n: tx.n, a: tx.a, d: tx.d, cat: tx.cat || "" });
+  function upd(k, v) { setForm(p => ({ ...p, [k]: v })); }
+  return (
+    <div style={{
+      position: "fixed", inset: 0, zIndex: 400,
+      background: "rgba(0,0,0,.4)", backdropFilter: "blur(2px)",
+      display: "flex", alignItems: "center", justifyContent: "center",
+    }} onClick={onClose}>
+      <Crd style={{ width: 420, padding: 28, boxShadow: "0 20px 60px rgba(0,0,0,.2)" }} onClick={e => e.stopPropagation()}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
+          <h2 style={{ margin: 0, fontSize: 16, fontWeight: 700, color: "var(--foreground)" }}>Edit Transaction</h2>
+          <button onClick={onClose} style={{ background: "none", border: "none", fontSize: 20, color: "var(--muted-foreground)", cursor: "pointer", lineHeight: 1 }}>×</button>
+        </div>
+        {[["Description", "n", "text"], ["Date", "d", "text"], ["Amount (£)", "a", "number"], ["Category", "cat", "text"]].map(([label, key, type]) => (
+          <div key={key} style={{ marginBottom: 14 }}>
+            <label style={{ display: "block", fontSize: 11, fontWeight: 600, color: "var(--muted-foreground)", marginBottom: 4, textTransform: "uppercase", letterSpacing: ".04em" }}>{label}</label>
+            <input
+              type={type} value={form[key]}
+              onChange={e => upd(key, type === "number" ? parseFloat(e.target.value) || 0 : e.target.value)}
+              style={{
+                width: "100%", padding: "8px 10px",
+                border: "1px solid var(--input)", borderRadius: "var(--radius)",
+                fontSize: 13, color: "var(--foreground)", background: "var(--background)",
+                outline: "none", boxSizing: "border-box",
+              }}
+            />
+          </div>
+        ))}
+        <div style={{ display: "flex", gap: 8, marginTop: 20 }}>
+          <Btn outline sm onClick={onClose}>Cancel</Btn>
+          <Btn grad sm onClick={() => { onSave(form); onClose(); }}>Save Changes</Btn>
+        </div>
+      </Crd>
+    </div>
+  );
+}
+
+// ── Balance Banner ─────────────────────────────────────────────────────────
+function BalanceBanner({ selL, selR, allItems, onResolve }) {
+  const lTotal = allItems.filter(m => selL.includes(m.id)).reduce((s, m) => s + Math.abs(m.item.a), 0);
+  const rTotal = allItems.filter(m => selR.includes(m.id)).reduce((s, m) => s + Math.abs(m.item.a), 0);
+  const diff = lTotal - rTotal;
+  const balanced = lTotal > 0 && rTotal > 0 && Math.abs(diff) < 0.01;
+  if (!selL.length && !selR.length) return null;
+  return (
+    <div style={{
+      position: "sticky", bottom: 0, zIndex: 50,
+      margin: "0 -24px", padding: "12px 24px",
+      background: "rgba(255,255,255,.95)", backdropFilter: "blur(8px)",
+      borderTop: "1px solid var(--border)",
+      boxShadow: "0 -4px 20px rgba(0,0,0,.06)",
+      display: "flex", alignItems: "center", gap: 16,
+    }}>
+      <div style={{ display: "flex", gap: 20, flex: 1, alignItems: "center" }}>
+        <div style={{ textAlign: "center" }}>
+          <div style={{ fontSize: 10, fontWeight: 600, color: "var(--muted-foreground)", textTransform: "uppercase", marginBottom: 2 }}>Ledger</div>
+          <div style={{ fontSize: 15, fontWeight: 700, color: "var(--foreground)" }}>£{lTotal.toFixed(2)}</div>
+        </div>
+        <div style={{ color: "var(--muted-foreground)", fontSize: 18 }}>⇄</div>
+        <div style={{ textAlign: "center" }}>
+          <div style={{ fontSize: 10, fontWeight: 600, color: "var(--muted-foreground)", textTransform: "uppercase", marginBottom: 2 }}>Statement</div>
+          <div style={{ fontSize: 15, fontWeight: 700, color: "var(--foreground)" }}>£{rTotal.toFixed(2)}</div>
+        </div>
+        <div style={{
+          padding: "4px 12px", borderRadius: 999,
+          background: balanced ? "rgba(0,232,157,.1)" : "rgba(255,39,95,.08)",
+          border: `1px solid ${balanced ? "rgba(0,232,157,.3)" : "rgba(255,39,95,.25)"}`,
+          fontSize: 12, fontWeight: 700,
+          color: balanced ? "var(--positive)" : "var(--destructive)",
+        }}>
+          {balanced ? "✓ Balanced" : `Diff: £${Math.abs(diff).toFixed(2)}`}
+        </div>
+      </div>
+      <Btn grad onClick={balanced ? onResolve : undefined} disabled={!balanced}>Resolve Selected</Btn>
+    </div>
+  );
+}
+
+// ── Confidence Box — two-action model (Change 3) ───────────────────────────
+function ConfBox({ item, onAccept, onUpdate, onResolveUpdated, onDismissBoth }) {
+  const barColor = item.conf >= 90 ? "var(--positive)" : item.conf >= 70 ? "var(--warning)" : "var(--destructive)";
+
+  // Build update explanation per anomaly type
+  function updateExplanation(it) {
+    if (it.type === "Date offset") return `Date will be updated from ${it.L?.d} to ${it.R?.d} to match the bank statement.`;
+    if (it.type === "Name variant") return `Name will be updated from "${it.L?.n}" to "${it.R?.n}" to match the bank statement.`;
+    if (it.type === "Amount diff") {
+      const from = it.L ? fmtGbp(it.L.a) : "—";
+      const to   = it.R ? fmtGbp(it.R.a) : "—";
+      return `Amount will be updated from ${from} to ${to}. This will be applied to the ${it.L?.n || "transaction"}.`;
+    }
+    return it.ex || "";
+  }
+
+  const tooltipContent = (
+    <div style={{ fontSize: 12, maxWidth: 220 }}>
+      <div style={{ fontSize: 10, fontWeight: 600, opacity: .6, marginBottom: 5, textTransform: "uppercase", letterSpacing: ".05em" }}>AI Analysis</div>
+      <div style={{ marginBottom: 6, lineHeight: 1.5 }}>{item.ex}</div>
+      <div style={{ display: "flex", gap: 4, alignItems: "center" }}>
+        <Badge v={item.conf >= 80 ? "warning" : "critical"} xs>{item.type}</Badge>
+        <span style={{ opacity: .6 }}>{item.conf}%</span>
+      </div>
+    </div>
+  );
+
+  // Updated state — show changed values + Resolve button
+  if (item._updated) {
+    return (
+      <div style={{
+        width: "100%", padding: "10px", borderRadius: "calc(var(--radius) + 4px)",
+        border: "1px solid rgba(0,120,255,.3)", background: "rgba(0,120,255,.04)",
+        display: "flex", flexDirection: "column", gap: 8, boxSizing: "border-box",
+      }}>
+        <div style={{ fontSize: 11, fontWeight: 600, color: "var(--primary)", textAlign: "center" }}>✓ Updated</div>
+        <div style={{ fontSize: 11, color: "var(--muted-foreground)", textAlign: "center", lineHeight: 1.4 }}>{updateExplanation(item)}</div>
+        <button onClick={e => { e.stopPropagation(); onResolveUpdated(item); }} style={{
+          width: "100%", padding: "5px 8px", background: "var(--primary)",
+          color: "#fff", border: "none",
+          borderRadius: "var(--radius)", fontSize: 11, fontWeight: 600, cursor: "pointer",
+          display: "flex", alignItems: "center", justifyContent: "center", gap: 4,
+        }}>✓ Resolve</button>
+      </div>
+    );
+  }
+
+  // Duplicate — two competing ledger candidates for one statement entry
+  if (item.type === "Duplicate") {
+    return (
+      <div style={{
+        width: "100%", padding: "10px", borderRadius: "calc(var(--radius) + 4px)",
+        border: "1px solid rgba(255,89,5,.3)", background: "rgba(255,89,5,.04)",
+        display: "flex", flexDirection: "column", gap: 8, boxSizing: "border-box",
+      }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+          <div style={{ flex: 1, height: 4, borderRadius: 99, background: "var(--border)", overflow: "hidden" }}>
+            <div style={{ width: item.conf + "%", height: "100%", background: "var(--warning)", borderRadius: 99, transition: "width .4s" }} />
+          </div>
+          <span style={{ fontSize: 12, fontWeight: 700, color: "var(--warning)", minWidth: 32, textAlign: "right" }}>{item.conf}%</span>
+        </div>
+        <div style={{ display: "flex", justifyContent: "center" }}>
+          <Badge v="warning" xs>Duplicate</Badge>
+        </div>
+        <div style={{ fontSize: 10, color: "var(--muted-foreground)", textAlign: "center", lineHeight: 1.4 }}>
+          2 ledger entries · 1 statement line
+        </div>
+        <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+          <button onClick={e => { e.stopPropagation(); onAccept(item, "L"); }} style={{
+            width: "100%", padding: "5px 6px", background: "transparent",
+            color: "var(--positive)", border: "1px solid rgba(0,232,157,.4)",
+            borderRadius: "var(--radius)", fontSize: 11, fontWeight: 600, cursor: "pointer",
+          }}>✓ Use Top</button>
+          <button onClick={e => { e.stopPropagation(); onAccept(item, "L2"); }} style={{
+            width: "100%", padding: "5px 6px", background: "transparent",
+            color: "var(--primary)", border: "1px solid rgba(0,120,255,.35)",
+            borderRadius: "var(--radius)", fontSize: 11, fontWeight: 600, cursor: "pointer",
+          }}>✓ Use Bottom</button>
+          <button onClick={e => { e.stopPropagation(); onDismissBoth(item); }} style={{
+            width: "100%", padding: "5px 6px", background: "transparent",
+            color: "var(--muted-foreground)", border: "1px solid var(--border)",
+            borderRadius: "var(--radius)", fontSize: 11, fontWeight: 600, cursor: "pointer",
+          }}>✕ Dismiss Both</button>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <Tooltip content={tooltipContent}>
+      <div style={{
+        width: "100%", padding: "10px", borderRadius: "calc(var(--radius) + 4px)",
+        border: "1px solid var(--border)", background: "var(--muted)",
+        display: "flex", flexDirection: "column", gap: 8, boxSizing: "border-box",
+      }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+          <div style={{ flex: 1, height: 4, borderRadius: 99, background: "var(--border)", overflow: "hidden" }}>
+            <div style={{ width: item.conf + "%", height: "100%", background: barColor, borderRadius: 99, transition: "width .4s" }} />
+          </div>
+          <span style={{ fontSize: 12, fontWeight: 700, color: barColor, minWidth: 32, textAlign: "right" }}>{item.conf}%</span>
+        </div>
+        <div style={{ display: "flex", justifyContent: "center" }}>
+          <Badge v={item.conf >= 80 ? "warning" : "critical"} xs>{item.type}</Badge>
+        </div>
+        {/* Two-action buttons */}
+        <div style={{ display: "flex", gap: 6 }}>
+          <button onClick={e => { e.stopPropagation(); onAccept(item); }} style={{
+            flex: 1, padding: "5px 6px", background: "transparent",
+            color: "var(--positive)", border: "1px solid rgba(0,232,157,.4)",
+            borderRadius: "var(--radius)", fontSize: 11, fontWeight: 600, cursor: "pointer",
+            display: "flex", alignItems: "center", justifyContent: "center", gap: 3,
+          }}>✓ Accept</button>
+          <button onClick={e => { e.stopPropagation(); onUpdate(item); }} style={{
+            flex: 1, padding: "5px 6px", background: "transparent",
+            color: "var(--primary)", border: "1px solid rgba(0,120,255,.35)",
+            borderRadius: "var(--radius)", fontSize: 11, fontWeight: 600, cursor: "pointer",
+            display: "flex", alignItems: "center", justifyContent: "center", gap: 3,
+          }}>↑ Update</button>
+        </div>
+        <div style={{ fontSize: 10, color: "var(--muted-foreground)", textAlign: "center" }}>Hover for details</div>
+      </div>
+    </Tooltip>
+  );
+}
+
+// ── Ledger / Statement Items ───────────────────────────────────────────────
+function LedgerItem({ item, checked, onCheck, onEdit }) {
+  return (
+    <Crd style={{ padding: "10px 12px", borderColor: checked ? "var(--primary)" : "var(--border)", background: checked ? "rgba(0,120,255,.02)" : "var(--card)" }}>
+      <div style={{ display: "flex", alignItems: "flex-start", gap: 8 }}>
+        <input type="checkbox" checked={checked} onChange={onCheck} style={{ marginTop: 2, accentColor: "var(--positive)", cursor: "pointer", flexShrink: 0 }} />
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 2 }}>
+            <span style={{ fontSize: 11, color: "var(--muted-foreground)" }}>{item.d}</span>
+            <Amt a={item.a} sm />
+          </div>
+          <div style={{ fontSize: 13, fontWeight: 600, color: "var(--foreground)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{item.n}</div>
+          {item.cat && <div style={{ fontSize: 11, color: "var(--muted-foreground)", marginTop: 1 }}>{item.cat}</div>}
+        </div>
+        <button onClick={e => { e.stopPropagation(); onEdit(); }} style={{ flexShrink: 0, padding: "3px 6px", background: "transparent", border: "1px solid var(--border)", borderRadius: "var(--radius)", cursor: "pointer", fontSize: 11, color: "var(--muted-foreground)" }}>✎</button>
+      </div>
+    </Crd>
+  );
+}
+
+function StatementItem({ item, checked, onCheck }) {
+  if (!item) return (
+    <Crd style={{ padding: 12, display: "flex", alignItems: "center", justifyContent: "center", minHeight: 56 }}>
+      <span style={{ fontSize: 12, color: "var(--muted-foreground)" }}>Not in statement</span>
+    </Crd>
+  );
+  return (
+    <Crd style={{ padding: "10px 12px", borderColor: checked ? "var(--primary)" : "var(--border)", background: checked ? "rgba(0,120,255,.02)" : "var(--card)" }}>
+      <div style={{ display: "flex", alignItems: "flex-start", gap: 8 }}>
+        <input type="checkbox" checked={checked} onChange={onCheck} style={{ marginTop: 2, accentColor: "var(--positive)", cursor: "pointer", flexShrink: 0 }} />
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 2 }}>
+            <span style={{ fontSize: 11, color: "var(--muted-foreground)" }}>{item.d}</span>
+            <Amt a={item.a} sm />
+          </div>
+          <div style={{ fontSize: 13, fontWeight: 600, color: "var(--foreground)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{item.n}</div>
+        </div>
+      </div>
+    </Crd>
+  );
+}
+
+// Change 4 — Not In Ledger: empty left side, centered Create Transaction button
+// This component renders the CENTER column for "not in ledger" rows.
+// The left side is rendered as null (empty) by Screen3.
+function NotInLedgerCenter({ statementItem, onCreated, onResolve, created }) {
+  const [loading, setLoading] = useState(false);
+  function handleCreate() {
+    setLoading(true);
+    setTimeout(() => { setLoading(false); onCreated(statementItem); }, 500);
+  }
+  if (created) {
+    return (
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "center" }}>
+        <button onClick={e => { e.stopPropagation(); onResolve(); }} style={{
+          padding: "6px 16px", background: "var(--primary)", color: "#fff",
+          border: "none", borderRadius: "var(--radius)", fontSize: 12, fontWeight: 600, cursor: "pointer",
+        }}>✓ Resolve</button>
+      </div>
+    );
+  }
+  return (
+    <div style={{ display: "flex", alignItems: "center", justifyContent: "center" }}>
+      {loading ? (
+        <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+          <div style={{ width: 14, height: 14, border: "2px solid var(--primary)", borderTopColor: "transparent", borderRadius: 99, animation: "spin .6s linear infinite" }} />
+          <span style={{ fontSize: 12, color: "var(--primary)", fontWeight: 500 }}>Creating…</span>
+        </div>
+      ) : (
+        <button onClick={handleCreate} style={{
+          padding: "6px 14px", background: "transparent",
+          color: "var(--primary)", border: "1px solid var(--primary)",
+          borderRadius: "var(--radius)", fontSize: 12, fontWeight: 600, cursor: "pointer",
+          display: "flex", alignItems: "center", gap: 5,
+        }}>+ Create Transaction</button>
+      )}
+    </div>
+  );
+}
+
+function SecHdr({ icon, color, title, itemCount, totalAmt, open, onToggle }) {
+  return (
+    <div onClick={onToggle} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "12px 18px", cursor: onToggle ? "pointer" : "default", userSelect: "none" }}>
+      <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+        <span style={{ color }}>{icon}</span>
+        <span style={{ fontSize: 14, fontWeight: 700, color }}>{title}</span>
+        {itemCount != null && (
+          <span style={{ fontSize: 13, color: "var(--muted-foreground)" }}>
+            · {itemCount} item{itemCount !== 1 ? "s" : ""}
+            {totalAmt != null ? " · " + fmtGbp(totalAmt) : ""}
+          </span>
+        )}
+      </div>
+      {onToggle && <span style={{ color: "var(--muted-foreground)", fontSize: 12 }}>{open ? "▲" : "▼"}</span>}
+    </div>
+  );
+}
+
+// ── DATA ───────────────────────────────────────────────────────────────────
+const INIT_ATTENTION = [
+  { id:"a1", L:{ d:"28 Jun", n:"WIRE TRF – ACME CORP", a:12500, cat:"Sales Revenue" }, R:{ d:"29 Jun", n:"ACME CORP WIRE", a:12500 }, conf:88, type:"Date offset", ex:"Same transaction, 1-day date offset. Fiskl: 28 Jun, Statement: 29 Jun. Amounts match exactly.", at:"accept", aiSuggested:true },
+  { id:"a2", L:{ d:"26 Jun", n:"STRIPE PAYOUT", a:8943.22, cat:"Payment Processing" }, R:{ d:"26 Jun", n:"STRIPE PAYMENTS UK", a:9000 }, conf:82, type:"Amount diff", ex:"Gross vs net payout. £56.78 = Stripe processing fee.", at:"accept", aiSuggested:true },
+  { id:"a3", L:{ d:"25 Jun", n:"PAYMENT – SMITH & CO", a:-3200, cat:"Supplier Payments" }, R:{ d:"25 Jun", n:"SMITH AND COMPANY LTD", a:-3200 }, conf:92, type:"Name variant", ex:"Same legal entity — abbreviated name in ledger vs full registered name on statement.", at:"accept", aiSuggested:true },
+  { id:"a4", L:{ d:"24 Jun", n:"DD – HMRC VAT Q2", a:-4812, cat:"Tax Payments" }, R:{ d:"24 Jun", n:"HMRC VAT", a:-4812.5 }, conf:68, type:"Amount diff", ex:"50p rounding difference. Likely a currency rounding issue on HMRC's side.", at:"review", aiSuggested:true },
+  { id:"dup1", L:{ d:"27 Jun", n:"STRIPE PAYOUT", a:8943.22, cat:"Payment Processing" }, L2:{ d:"27 Jun", n:"STRIPE TRANSFER", a:8943.22, cat:"Payment Processing" }, R:{ d:"27 Jun", n:"STRIPE PAYMENTS UK", a:8943.22 }, conf:74, type:"Duplicate", ex:"Two ledger entries share the same amount and date as one bank statement line. Pick the correct one to match, or dismiss both.", aiSuggested:true },
+  { id:"o1", L:null, R:{ d:"30 Jun", n:"BANK SERVICE CHARGE", a:-35 }, conf:null, type:null, ex:null, at:null, aiSuggested:false },
+  { id:"o2", L:null, R:{ d:"29 Jun", n:"CARD MACHINE RENTAL", a:-15 }, conf:null, type:null, ex:null, at:null, aiSuggested:false },
+];
+const INIT_MATCHED = [
+  { id:"m1", L:{ d:"28 Jun", n:"FASTER PYMT – CLIENT ABC", a:5000 }, R:{ d:"28 Jun", n:"FASTER PAYMENT CLIENT ABC", a:5000 }, conf:99 },
+  { id:"m2", L:{ d:"27 Jun", n:"DD – OFFICE RENT", a:-2400 }, R:{ d:"27 Jun", n:"STANDING ORDER RENT", a:-2400 }, conf:99 },
+  { id:"m3", L:{ d:"26 Jun", n:"CARD – AWS", a:-487.32 }, R:{ d:"26 Jun", n:"AMAZON WEB SERVICES", a:-487.32 }, conf:98 },
+  { id:"m4", L:{ d:"25 Jun", n:"BACS – PAYROLL", a:-34200 }, R:{ d:"25 Jun", n:"PAYROLL BACS BULK", a:-34200 }, conf:99 },
+  { id:"m5", L:{ d:"24 Jun", n:"INSURANCE", a:-890 }, R:{ d:"24 Jun", n:"AVIVA INSURANCE", a:-890 }, conf:97 },
+];
+const LEDGER = [
+  { id:"l1", d:"28 Jun", n:"WIRE TRF – ACME CORP", a:12500, cat:"Sales Revenue", st:"unreconciled" },
+  { id:"l2", d:"26 Jun", n:"STRIPE PAYOUT", a:8943.22, cat:"Payment Processing", st:"unreconciled" },
+  { id:"l3", d:"25 Jun", n:"PAYMENT – SMITH & CO", a:-3200, cat:"Supplier Payments", st:"unreconciled" },
+  { id:"l4", d:"24 Jun", n:"DD – HMRC VAT Q2", a:-4812, cat:"Tax Payments", st:"unreconciled" },
+  { id:"l5", d:"28 Jun", n:"FASTER PYMT – CLIENT ABC", a:5000, cat:"Sales Revenue", st:"reconciled" },
+  { id:"l6", d:"27 Jun", n:"DD – OFFICE RENT", a:-2400, cat:"Rent & Utilities", st:"reconciled" },
+  { id:"l7", d:"26 Jun", n:"CARD – AWS", a:-487.32, cat:"Software", st:"reconciled" },
+  { id:"l8", d:"25 Jun", n:"BACS – PAYROLL", a:-34200, cat:"Payroll", st:"reconciled" },
+  { id:"l9", d:"24 Jun", n:"INSURANCE", a:-890, cat:"Insurance", st:"reconciled" },
+];
+
+// ── NAV STRUCTURE ──────────────────────────────────────────────────────────
+const NAV_ITEMS = [
+  { id:"dashboard", label:"Dashboard", icon:"home", url:"#" },
+  { id:"sales", label:"Sales", icon:"shoppingBag", url:"#", sub:[
+    { id:"invoices", label:"Invoices", url:"#" },
+    { id:"recurring", label:"Recurring Invoices", url:"#" },
+    { id:"quotes", label:"Quotes", url:"#" },
+    { id:"clients", label:"Clients", url:"#" },
+  ]},
+  { id:"purchases", label:"Purchases", icon:"shoppingCart", url:"#", sub:[
+    { id:"time", label:"Time", url:"#" },
+    { id:"mileage", label:"Mileage", url:"#" },
+    { id:"vendors", label:"Vendors", url:"#" },
+    { id:"expenses", label:"Expenses", url:"#" },
+  ]},
+  { id:"accounting", label:"Accounting", icon:"pieChart", url:"#", sub:[
+    { id:"coa", label:"Chart of Accounts", url:"#" },
+    { id:"reports", label:"Reports", url:"#" },
+    { id:"journal", label:"Multi Journal", url:"#" },
+    { id:"transactions", label:"Transactions", url:"#" },
+    { id:"reconciliation", label:"Reconciliation", url:"#", active:true },
+  ]},
+  { id:"products", label:"Products & Services", icon:"package", url:"#" },
+  { id:"banking", label:"Banking", icon:"wallet", url:"#" },
+  { id:"team", label:"Team Members", icon:"users", url:"#" },
+];
+
+// ── SIDEBAR ────────────────────────────────────────────────────────────────
+function Sidebar({ collapsed, onToggle }) {
+  const W = collapsed ? 48 : 256;
+  const [openSections, setOpenSections] = useState({ accounting: true });
+
+  function toggleSection(id) {
+    setOpenSections(p => ({ ...p, [id]: !p[id] }));
+  }
+
+  return (
+    <div style={{
+      width: W, minWidth: W, height: "100vh",
+      background: "var(--sidebar)",
+      borderRight: "1px solid var(--sidebar-border)",
+      display: "flex", flexDirection: "column",
+      transition: "width .25s ease, min-width .25s ease",
+      position: "sticky", top: 0, flexShrink: 0,
+      overflow: "hidden",
+    }}>
+      {/* Logo */}
+      <div style={{ padding: collapsed ? "14px 12px" : "14px 12px 10px", display: "flex", alignItems: "center", gap: 8 }}>
+        <div style={{ width: 28, height: 28, borderRadius: 7, background: C.grad, display: "flex", alignItems: "center", justifyContent: "center", color: "#fff", fontWeight: 800, fontSize: 13, flexShrink: 0 }}>F</div>
+        {!collapsed && (
+          <div style={{ minWidth: 0 }}>
+            <div style={{ fontSize: 14, fontWeight: 700, color: "var(--sidebar-foreground)", lineHeight: 1.2 }}>Fiskl</div>
+            <div style={{ fontSize: 10, fontWeight: 600, color: "var(--muted-foreground)", textTransform: "uppercase", letterSpacing: ".06em" }}>Pro Plan</div>
+          </div>
+        )}
+      </div>
+
+      {/* Nav */}
+      <div style={{ flex: 1, overflowY: "auto", padding: "4px 8px" }}>
+        {NAV_ITEMS.map(item => {
+          const isOpen = openSections[item.id];
+          const hasActive = item.sub?.some(s => s.active);
+
+          return (
+            <div key={item.id}>
+              {/* Main item */}
+              <Tooltip content={collapsed ? item.label : null} side="right">
+                <button
+                  onClick={() => item.sub ? toggleSection(item.id) : null}
+                  style={{
+                    display: "flex", alignItems: "center",
+                    gap: 8, width: "100%",
+                    padding: collapsed ? "8px" : "8px 8px",
+                    justifyContent: collapsed ? "center" : "flex-start",
+                    background: hasActive ? "var(--sidebar-accent)" : "transparent",
+                    color: hasActive ? "var(--sidebar-accent-foreground)" : "var(--sidebar-foreground)",
+                    border: "none", borderRadius: "var(--radius)",
+                    fontSize: 13, fontWeight: hasActive ? 600 : 400,
+                    cursor: "pointer", textAlign: "left",
+                    transition: "background .15s",
+                  }}
+                  onMouseEnter={e => { if (!hasActive) e.currentTarget.style.background = "var(--sidebar-accent)"; }}
+                  onMouseLeave={e => { if (!hasActive) e.currentTarget.style.background = "transparent"; }}
+                >
+                  <Icon d={Icons[item.icon]} size={16} />
+                  {!collapsed && <span style={{ flex: 1 }}>{item.label}</span>}
+                  {!collapsed && item.sub && (
+                    <Icon d={Icons.chevronRight} size={14} style={{ transition: "transform .2s", transform: isOpen ? "rotate(90deg)" : "none" }} />
+                  )}
+                </button>
+              </Tooltip>
+
+              {/* Submenu */}
+              {!collapsed && item.sub && isOpen && (
+                <div style={{ paddingLeft: 12, marginBottom: 2 }}>
+                  {item.sub.map(sub => (
+                    <button key={sub.id} style={{
+                      display: "block", width: "100%", padding: "6px 8px",
+                      background: sub.active ? "var(--sidebar-accent)" : "transparent",
+                      color: sub.active ? "var(--sidebar-primary)" : "var(--sidebar-foreground)",
+                      border: "none", borderRadius: "var(--radius)",
+                      fontSize: 13, fontWeight: sub.active ? 600 : 400,
+                      cursor: "pointer", textAlign: "left", transition: "background .15s",
+                    }}
+                      onMouseEnter={e => { if (!sub.active) e.currentTarget.style.background = "var(--sidebar-accent)"; }}
+                      onMouseLeave={e => { if (!sub.active) e.currentTarget.style.background = "transparent"; }}
+                    >
+                      {sub.label}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+          );
+        })}
+      </div>
+
+      {/* Settings */}
+      <div style={{ padding: "8px", borderTop: "1px solid var(--sidebar-border)" }}>
+        <Tooltip content={collapsed ? "Settings" : null} side="right">
+          <button style={{
+            display: "flex", alignItems: "center", gap: 8, width: "100%",
+            padding: "8px", justifyContent: collapsed ? "center" : "flex-start",
+            background: "transparent", color: "var(--sidebar-foreground)",
+            border: "none", borderRadius: "var(--radius)",
+            fontSize: 13, cursor: "pointer",
+          }}
+            onMouseEnter={e => e.currentTarget.style.background = "var(--sidebar-accent)"}
+            onMouseLeave={e => e.currentTarget.style.background = "transparent"}
+          >
+            <Icon d={Icons.settings} size={16} />
+            {!collapsed && <span>Settings</span>}
+          </button>
+        </Tooltip>
+      </div>
+
+      {/* User footer */}
+      <div style={{ padding: "8px", borderTop: "1px solid var(--sidebar-border)" }}>
+        <DropdownMenu
+          align="end"
+          trigger={
+            <button style={{
+              display: "flex", alignItems: "center", gap: 8, width: "100%",
+              padding: "8px", justifyContent: collapsed ? "center" : "flex-start",
+              background: "transparent", color: "var(--sidebar-foreground)",
+              border: "none", borderRadius: "var(--radius)", cursor: "pointer",
+            }}
+              onMouseEnter={e => e.currentTarget.style.background = "var(--sidebar-accent)"}
+              onMouseLeave={e => e.currentTarget.style.background = "transparent"}
+            >
+              <div style={{ width: 28, height: 28, borderRadius: 7, background: C.grad, display: "flex", alignItems: "center", justifyContent: "center", color: "#fff", fontSize: 10, fontWeight: 700, flexShrink: 0 }}>AL</div>
+              {!collapsed && (
+                <>
+                  <div style={{ flex: 1, minWidth: 0, textAlign: "left" }}>
+                    <div style={{ fontSize: 13, fontWeight: 500, color: "var(--sidebar-foreground)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>Acme Corp</div>
+                    <div style={{ fontSize: 11, color: "var(--muted-foreground)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>Alina</div>
+                  </div>
+                  <Icon d={Icons.moreVertical} size={14} />
+                </>
+              )}
+            </button>
+          }
+          items={[
+            { label: "Company" },
+            { icon: <Icon d={Icons.creditCard} size={14} />, text: "Subscriptions & Billing" },
+            { icon: <Icon d={Icons.layers} size={14} />, text: "Integrations" },
+            { icon: <Icon d={Icons.shield} size={14} />, text: "External Access" },
+            { icon: <Icon d={Icons.helpCircle} size={14} />, text: "Get Help" },
+            { separator: true },
+            { label: "Account" },
+            { icon: <Icon d={Icons.user} size={14} />, text: "Profile Settings" },
+            { icon: <Icon d={Icons.sliders} size={14} />, text: "Preferences" },
+            { separator: true },
+            { icon: <Icon d={Icons.logOut} size={14} />, text: "Log out", danger: true },
+          ]}
+        />
+      </div>
+    </div>
+  );
+}
+
+// ── SITE HEADER ────────────────────────────────────────────────────────────
+function SiteHeader({ collapsed, onToggleCollapse, screen, onScreenChange }) {
+  const [privacy, setPrivacy] = useState(false);
+
+  const breadcrumbs = [
+    { label: "Accounting", href: "#" },
+    { label: "Reconciliation" },
+  ];
+
+  const stepLabels = { 1: "Open", 2: "Upload", 3: "Reconcile", 4: "Report" };
+
+  return (
+    <header style={{
+      height: 56, display: "flex", alignItems: "center", justifyContent: "space-between",
+      padding: "0 16px 0 8px",
+      borderBottom: "1px solid var(--border)",
+      background: "var(--background)",
+      position: "sticky", top: 0, zIndex: 20,
+      gap: 8, flexShrink: 0,
+    }}>
+      {/* Left: toggle + breadcrumb */}
+      <div style={{ display: "flex", alignItems: "center", gap: 4, minWidth: 0, flex: 1 }}>
+        {/* Sidebar toggle */}
+        <button onClick={onToggleCollapse} style={{
+          padding: 8, background: "transparent", border: "none",
+          borderRadius: "var(--radius)", cursor: "pointer",
+          color: "var(--foreground)", display: "flex", alignItems: "center",
+          flexShrink: 0,
+        }}
+          onMouseEnter={e => e.currentTarget.style.background = "var(--accent)"}
+          onMouseLeave={e => e.currentTarget.style.background = "transparent"}
+        >
+          <Icon d={Icons.panelLeft} size={18} />
+        </button>
+
+        <Separator vertical />
+
+        {/* Breadcrumb */}
+        <nav style={{ display: "flex", alignItems: "center", gap: 4, fontSize: 14, minWidth: 0 }}>
+          {/* Back arrow to parent */}
+          <a href="#" style={{ display: "flex", alignItems: "center", gap: 6, color: "var(--muted-foreground)", textDecoration: "none", fontWeight: 500, padding: "4px 6px", borderRadius: "var(--radius)", flexShrink: 0 }}
+            onMouseEnter={e => e.currentTarget.style.color = "var(--foreground)"}
+            onMouseLeave={e => e.currentTarget.style.color = "var(--muted-foreground)"}
+          >
+            <Icon d={Icons.arrowLeft} size={15} />
+            <span style={{ fontSize: 14 }}>{breadcrumbs[0].label}</span>
+          </a>
+          <Icon d={Icons.chevronRight} size={14} style={{ color: "var(--muted-foreground)", flexShrink: 0 }} />
+          <span style={{ fontSize: 14, fontWeight: 600, color: "var(--foreground)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+            {breadcrumbs[1].label}
+          </span>
+          {/* Step indicator */}
+          <span style={{ fontSize: 12, color: "var(--muted-foreground)", marginLeft: 4, whiteSpace: "nowrap" }}>
+            · Step {screen}: {stepLabels[screen]}
+          </span>
+        </nav>
+      </div>
+
+      {/* Right: actions */}
+      <div style={{ display: "flex", alignItems: "center", gap: 6, flexShrink: 0 }}>
+        {/* Privacy toggle */}
+        <Tooltip content={privacy ? "Hide values" : "Show values"}>
+          <button onClick={() => setPrivacy(p => !p)} style={{
+            padding: "6px", background: privacy ? "var(--accent)" : "transparent",
+            border: "none", borderRadius: "var(--radius)", cursor: "pointer",
+            color: "var(--foreground)", display: "flex", alignItems: "center",
+          }}
+            onMouseEnter={e => e.currentTarget.style.background = "var(--accent)"}
+            onMouseLeave={e => { if (!privacy) e.currentTarget.style.background = "transparent"; }}
+          >
+            <Icon d={privacy ? Icons.eyeOff : Icons.eye} size={16} />
+          </button>
+        </Tooltip>
+
+        {/* Theme placeholder */}
+        <Tooltip content="Appearance">
+          <button style={{ padding: 6, background: "transparent", border: "none", borderRadius: "var(--radius)", cursor: "pointer", color: "var(--foreground)", display: "flex", alignItems: "center" }}
+            onMouseEnter={e => e.currentTarget.style.background = "var(--accent)"}
+            onMouseLeave={e => e.currentTarget.style.background = "transparent"}
+          >
+            <Icon d={Icons.sun} size={16} />
+          </button>
+        </Tooltip>
+
+        <Separator vertical />
+
+        {/* Ask Fi button */}
+        <div style={{ position: "relative", display: "inline-flex", borderRadius: 9 }}>
+          <div style={{
+            position: "absolute", inset: -1, borderRadius: 9,
+            background: C.grad, opacity: .25, filter: "blur(4px)",
+            pointerEvents: "none",
+          }} />
+          <div style={{
+            position: "relative", borderRadius: 9, padding: 1,
+            background: C.grad,
+          }}>
+            <button style={{
+              display: "flex", alignItems: "center", gap: 6,
+              padding: "5px 10px", borderRadius: 8,
+              background: "var(--background)",
+              border: "none", cursor: "pointer",
+              fontSize: 13, fontWeight: 500, color: "var(--foreground)",
+            }}>
+              <Icon d={Icons.fi} size={16} style={{ color: "var(--primary)" }} />
+              <span>Ask Fi</span>
+              <div style={{ padding: "1px 5px", background: "var(--muted)", border: "1px solid var(--border)", borderRadius: 4, fontSize: 11, fontWeight: 600 }}>/</div>
+            </button>
+          </div>
+        </div>
+
+        <Separator vertical />
+
+        {/* Tabs */}
+        <div style={{ display: "flex", gap: 1 }}>
+          {[1,2,3,4].map(n => (
+            <button key={n} onClick={() => onScreenChange(n)} style={{
+              padding: "5px 10px", background: "transparent", border: "none",
+              borderRadius: "var(--radius)",
+              fontSize: 12, fontWeight: screen === n ? 600 : 400,
+              color: screen === n ? "var(--primary)" : "var(--muted-foreground)",
+              cursor: "pointer",
+              borderBottom: screen === n ? "2px solid var(--primary)" : "2px solid transparent",
+            }}>
+              {n}. {["Open","Upload","Reconcile","Report"][n-1]}
+            </button>
+          ))}
+        </div>
+      </div>
+    </header>
+  );
+}
+
+// ── Year Selector (Change 1) ────────────────────────────────────────────────
+function YearSelector({ year, onChange }) {
+  return (
+    <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
+      <button onClick={() => onChange(year - 1)} style={{
+        width: 26, height: 26, display: "flex", alignItems: "center", justifyContent: "center",
+        background: "transparent", border: "1px solid var(--border)", borderRadius: "var(--radius)",
+        cursor: "pointer", color: "var(--muted-foreground)", fontSize: 12,
+      }}
+        onMouseEnter={e => e.currentTarget.style.background = "var(--accent)"}
+        onMouseLeave={e => e.currentTarget.style.background = "transparent"}
+      >‹</button>
+      <span style={{ fontSize: 13, fontWeight: 600, color: "var(--foreground)", minWidth: 36, textAlign: "center" }}>{year}</span>
+      <button onClick={() => onChange(year + 1)} style={{
+        width: 26, height: 26, display: "flex", alignItems: "center", justifyContent: "center",
+        background: "transparent", border: "1px solid var(--border)", borderRadius: "var(--radius)",
+        cursor: "pointer", color: "var(--muted-foreground)", fontSize: 12,
+      }}
+        onMouseEnter={e => e.currentTarget.style.background = "var(--accent)"}
+        onMouseLeave={e => e.currentTarget.style.background = "transparent"}
+      >›</button>
+    </div>
+  );
+}
+
+// ── SCREENS ────────────────────────────────────────────────────────────────
+function Screen1({ go }) {
+  const [ec, setEc] = useState(null);
+  const [year, setYear] = useState(2025);
+  const rc = LEDGER.filter(t => t.st === "reconciled").length;
+  return (
+    <div>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 20 }}>
+        <div>
+          <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 6 }}>
+            <h1 style={{ fontSize: 20, fontWeight: 700, color: "var(--foreground)", margin: 0 }}>HSBC Current Account</h1>
+            <Badge v="warning">Draft</Badge>
+          </div>
+          <div style={{ fontSize: 13, color: "var(--muted-foreground)" }}>1 Apr – 30 Jun {year} · {LEDGER.length} transactions</div>
+        </div>
+        <div style={{ display: "flex", gap: 8 }}>
+          <Btn outline sm onClick={go}>↑ Upload Statement</Btn>
+          <Btn outline sm>⬒ Report</Btn>
+        </div>
+      </div>
+
+      {/* Filter row with year selector (Change 1) */}
+      <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 12 }}>
+        <input placeholder="Search…" style={{
+          flex: 1, maxWidth: 220, padding: "6px 10px",
+          border: "1px solid var(--border)", borderRadius: "var(--radius)",
+          fontSize: 13, color: "var(--foreground)", background: "var(--background)", outline: "none",
+        }} />
+        <select style={{ padding: "6px 10px", border: "1px solid var(--border)", borderRadius: "var(--radius)", fontSize: 13, color: "var(--muted-foreground)", background: "var(--background)", cursor: "pointer", outline: "none" }}>
+          <option>Category ▾</option>
+        </select>
+        <select style={{ padding: "6px 10px", border: "1px solid var(--border)", borderRadius: "var(--radius)", fontSize: 13, color: "var(--muted-foreground)", background: "var(--background)", cursor: "pointer", outline: "none" }}>
+          <option>Status ▾</option>
+        </select>
+        <div style={{ marginLeft: "auto" }}>
+          <YearSelector year={year} onChange={setYear} />
+        </div>
+      </div>
+
+      <SumRow items={[
+        { label: "Beginning Balance", value: "£130,347.28" },
+        { label: "Statement", value: "—", sub: "No statement" },
+        { label: "Ledger Total", value: "£142,834.72" },
+        { label: "Matched", value: rc + " of " + LEDGER.length, sub: (LEDGER.length - rc) + " unreconciled" },
+      ]} />
+      <Crd style={{ marginTop: 12 }}>
+        <table style={{ width: "100%", borderCollapse: "collapse" }}>
+          <thead>
+            <tr style={{ borderBottom: "1px solid var(--border)" }}>
+              {["Date","Description","Category","Amount","Status"].map((h, i) => (
+                <th key={i} style={{ padding: "8px 14px", textAlign: i === 3 ? "right" : "left", fontSize: 10, fontWeight: 600, color: "var(--muted-foreground)", textTransform: "uppercase", letterSpacing: ".04em" }}>{h}</th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {LEDGER.map(tx => (
+              <tr key={tx.id} style={{ borderBottom: "1px solid var(--border)" }}>
+                <td style={{ padding: "10px 14px", color: "var(--muted-foreground)", fontSize: 12 }}>{tx.d}</td>
+                <td style={{ padding: "10px 14px", fontWeight: 500, color: "var(--foreground)", fontSize: 13 }}>{tx.n}</td>
+                <td style={{ padding: "10px 14px" }}>
+                  {ec === tx.id
+                    ? <input autoFocus defaultValue={tx.cat} onBlur={() => setEc(null)} onKeyDown={e => e.key === "Enter" && e.target.blur()} style={{ padding: "3px 6px", border: "1px solid var(--primary)", borderRadius: "var(--radius)", fontSize: 12, outline: "none", background: "var(--background)", color: "var(--foreground)" }} />
+                    : <span style={{ fontSize: 12, color: "var(--muted-foreground)", cursor: "pointer" }} onClick={() => setEc(tx.id)}>{tx.cat} ✎</span>
+                  }
+                </td>
+                <td style={{ padding: "10px 14px", textAlign: "right" }}><Amt a={tx.a} /></td>
+                <td style={{ padding: "10px 14px" }}><Badge v={tx.st === "reconciled" ? "positive" : "warning"}>{tx.st === "reconciled" ? "Reconciled" : "Unreconciled"}</Badge></td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </Crd>
+      <div style={{ marginTop: 16, padding: "14px 18px", border: "1px dashed rgba(0,120,255,.2)", borderRadius: "calc(var(--radius) + 4px)", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+        <div>
+          <div style={{ fontSize: 13, fontWeight: 500, color: "var(--foreground)" }}>✨ AI-powered reconciliation available</div>
+          <div style={{ fontSize: 11, color: "var(--muted-foreground)", marginTop: 1 }}>Upload a CSV to auto-match transactions</div>
+        </div>
+        <Btn outline blue sm onClick={go}>↑ Upload CSV</Btn>
+      </div>
+    </div>
+  );
+}
+
+function Screen2({ go }) {
+  const freeze = new URLSearchParams(window.location.search).get('freeze');
+  const [st, setSt] = useState(freeze === '2' ? 1 : 0);
+  const [pr, setPr] = useState(freeze === '2' ? 45 : 0);
+  useEffect(() => {
+    if (freeze === '2') return; // frozen for screenshot
+    if (st === 0) { const t = setTimeout(() => setSt(1), 500); return () => clearTimeout(t); }
+    if (st === 1) { const iv = setInterval(() => setPr(p => { if (p >= 100) { clearInterval(iv); setSt(2); return 100; } return p + 5; }), 30); return () => clearInterval(iv); }
+    if (st === 2) { setPr(0); const iv2 = setInterval(() => setPr(p => { if (p >= 100) { clearInterval(iv2); setSt(3); return 100; } return p + 3; }), 25); return () => clearInterval(iv2); }
+    if (st === 3) { const t2 = setTimeout(go, 900); return () => clearTimeout(t2); }
+  }, [st]);
+  const labels = ["Uploading","Parsing","AI Matching","Complete"];
+  const descs  = ["hsbc_q2_2025.csv","Extracting 33 transactions...","Comparing ledger with statement...","28 matched · 4 suggestions · 2 orphans"];
+  return (
+    <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", minHeight: 420 }}>
+      <div style={{ width: "100%", maxWidth: 440 }}>
+        <div style={{ display: "flex", gap: 3, marginBottom: 32 }}>
+          {labels.map((_, i) => <div key={i} style={{ flex: 1, height: 3, borderRadius: 99, background: i <= st ? "var(--positive)" : "var(--border)", transition: "background .4s" }} />)}
+        </div>
+        <Crd style={{ padding: 32, textAlign: "center" }}>
+          <div style={{ fontSize: 28, marginBottom: 12 }}>{st === 3 ? "✅" : "✨"}</div>
+          <h2 style={{ fontSize: 16, fontWeight: 700, color: "var(--foreground)", margin: "0 0 4px" }}>{labels[st]}</h2>
+          <p style={{ fontSize: 13, color: "var(--muted-foreground)", margin: "0 0 18px" }}>{descs[st]}</p>
+          {(st === 1 || st === 2) && (
+            <div style={{ height: 4, borderRadius: 99, background: "var(--border)", overflow: "hidden" }}>
+              <div style={{ height: "100%", width: pr + "%", background: st === 2 ? C.grad : "var(--primary)", borderRadius: 99, transition: "width .06s" }} />
+            </div>
+          )}
+        </Crd>
+      </div>
+    </div>
+  );
+}
+
+function Screen3({ go }) {
+  const [attention, setAttention] = useState(INIT_ATTENTION);
+  const [matched, setMatched] = useState(INIT_MATCHED);
+  const [resolved, setResolved] = useState([]);
+  const [selL, setSelL] = useState([]);
+  const [selR, setSelR] = useState([]);
+  const [editTarget, setEditTarget] = useState(null);
+  const [matchOpen, setMatchOpen] = useState(true);
+  const [resolvedOpen, setResolvedOpen] = useState(false);
+  const [attOpen, setAttOpen] = useState(true);
+  const [toast, setToast] = useState(null);
+  // Change 2: editable statement balance
+  const [stmtBal, setStmtBal] = useState("142890.50");
+  // Track which "not in ledger" rows have had a ledger entry created
+  const [createdLedger, setCreatedLedger] = useState({});
+  // Track picked candidate for duplicate items (future extensibility)
+  const [pickedCandidate, setPickedCandidate] = useState({});
+
+  function flash(m) { setToast(m); setTimeout(() => setToast(null), 2200); }
+
+  // Change 2: computed difference
+  const beginBal = 130347.28;
+  const stmtBalNum = parseFloat(stmtBal.replace(/,/g, "")) || 0;
+  const netMatched = matched.reduce((s, m) => s + m.L.a, 0) + resolved.reduce((s, r) => s + ((r.L || r.R || {}).a || 0), 0);
+  const diff = stmtBalNum - (beginBal + netMatched);
+  const diffZero = Math.abs(diff) < 0.01;
+
+  // Change 3: Accept — immediately moves to Resolved
+  function acceptItem(item) {
+    setAttention(p => p.filter(a => a.id !== item.id));
+    setResolved(p => [{ id: item.id, L: item.L, R: item.R, how: "AI accepted" }, ...p]);
+    setResolvedOpen(true);
+    flash("Resolved: " + (item.L?.n || item.R?.n || "item"));
+  }
+
+  // Change 3: Update — applies AI override inline, card stays, shows Resolve button
+  function updateItem(item) {
+    setAttention(p => p.map(a => {
+      if (a.id !== item.id) return a;
+      let updatedL = { ...a.L };
+      if (a.type === "Date offset") updatedL = { ...updatedL, d: a.R?.d || updatedL.d };
+      if (a.type === "Name variant") updatedL = { ...updatedL, n: a.R?.n || updatedL.n };
+      if (a.type === "Amount diff") updatedL = { ...updatedL, a: a.R?.a ?? updatedL.a };
+      return { ...a, L: updatedL, _updated: true };
+    }));
+  }
+
+  // Change 3: Resolve after Update — moves to Resolved
+  function resolveUpdated(item) {
+    setAttention(p => p.filter(a => a.id !== item.id));
+    setResolved(p => [{ id: item.id, L: item.L, R: item.R, how: "AI updated" }, ...p]);
+    setResolvedOpen(true);
+    flash("Resolved: " + (item.L?.n || item.R?.n || "item"));
+  }
+
+  function resolveSelected() {
+    const handled = new Set();
+    const newResolved = [];
+    attention.filter(a => (a.L && selL.includes(a.id)) || (a.R && selR.includes(a.id))).forEach(a => {
+      if (handled.has(a.id)) return;
+      handled.add(a.id);
+      newResolved.push({ id: a.id, L: a.L, R: a.R, how: "Manual" });
+    });
+    setAttention(p => p.filter(a => !handled.has(a.id)));
+    setResolved(p => [...newResolved, ...p]);
+    setSelL([]); setSelR([]);
+    setResolvedOpen(true);
+    flash("Manually resolved " + newResolved.length + " item(s)");
+  }
+
+  function toggleSelL(id) { setSelL(p => p.includes(id) ? p.filter(x => x !== id) : [...p, id]); }
+  function toggleSelR(id) { setSelR(p => p.includes(id) ? p.filter(x => x !== id) : [...p, id]); }
+
+  function uncheckMatched(id) {
+    const m = matched.find(x => x.id === id);
+    if (!m) return;
+    setMatched(p => p.filter(x => x.id !== id));
+    setAttention(p => [{ id, L: m.L, R: m.R, conf: m.conf, type: "Unconfirmed", ex: "Auto-match moved back for manual review.", at: "accept", aiSuggested: true }, ...p]);
+    flash("Moved back to Needs Attention");
+  }
+
+  function saveEdit(form) {
+    setAttention(p => p.map(a => {
+      if (a.id !== editTarget.id) return a;
+      const updated = { n: form.n, a: parseFloat(form.a), d: form.d, cat: form.cat };
+      if (editTarget._editL2) return { ...a, L2: { ...a.L2, ...updated } };
+      if (!a.L) return a;
+      return { ...a, L: { ...a.L, ...updated } };
+    }));
+    flash("Transaction updated");
+  }
+
+  // Change 4: create ledger entry for "not in ledger" row
+  function handleCreateLedger(itemId, stmtItem) {
+    const newL = { d: stmtItem.d, n: stmtItem.n, a: stmtItem.a, cat: "Uncategorized" };
+    setAttention(p => p.map(a => a.id === itemId ? { ...a, L: newL } : a));
+    setCreatedLedger(p => ({ ...p, [itemId]: true }));
+    flash("Ledger entry created: " + stmtItem.n);
+  }
+
+  // Change 4: resolve "not in ledger" after create
+  function handleResolveCreated(itemId) {
+    const item = attention.find(a => a.id === itemId);
+    if (!item) return;
+    setAttention(p => p.filter(a => a.id !== itemId));
+    setResolved(p => [{ id: itemId, L: item.L, R: item.R, how: "Created" }, ...p]);
+    setResolvedOpen(true);
+    setCreatedLedger(p => { const next = { ...p }; delete next[itemId]; return next; });
+    flash("Resolved: " + (item.R?.n || "item"));
+  }
+
+  // Duplicate: pick one candidate (which = "L" | "L2"), dismiss the other
+  function pickCandidate(item, which) {
+    const chosenL = which === "L2" ? item.L2 : item.L;
+    setAttention(p => p.filter(a => a.id !== item.id));
+    setResolved(p => [{ id: item.id, L: chosenL, R: item.R, how: "Duplicate resolved" }, ...p]);
+    setResolvedOpen(true);
+    setPickedCandidate(p => { const next = { ...p }; delete next[item.id]; return next; });
+    flash("Resolved: " + (chosenL?.n || "item"));
+  }
+
+  // Duplicate: dismiss both candidates, handle independently
+  function dismissBoth(item) {
+    setAttention(p => p.filter(a => a.id !== item.id));
+    setResolved(p => [{ id: item.id, L: null, R: item.R, how: "Dismissed (both)" }, ...p]);
+    setResolvedOpen(true);
+    setPickedCandidate(p => { const next = { ...p }; delete next[item.id]; return next; });
+    flash("Dismissed: " + (item.R?.n || "item"));
+  }
+
+  const bannerItems = [
+    ...attention.filter(a => a.L).map(a => ({ id: a.id, item: a.L })),
+    ...attention.filter(a => a.R).map(a => ({ id: a.id, item: a.R })),
+  ];
+  const matchTotal = matched.reduce((s, m) => s + Math.abs(m.L.a), 0);
+  const resolvedTotal = resolved.reduce((s, r) => s + Math.abs((r.L || r.R || {}).a || 0), 0);
+  const canDone = attention.length === 0;
+  const hasSelection = selL.length > 0 || selR.length > 0;
+
+  return (
+    <div>
+      {toast && (
+        <div style={{
+          position: "fixed", bottom: 80, left: "50%", transform: "translateX(-50%)",
+          background: "var(--foreground)", color: "var(--background)",
+          padding: "9px 18px", borderRadius: "var(--radius)", fontSize: 13, fontWeight: 500,
+          zIndex: 500, boxShadow: "0 4px 20px rgba(0,0,0,.2)",
+        }}>✓ {toast}</div>
+      )}
+      {editTarget && <EditModal tx={editTarget.L} onSave={saveEdit} onClose={() => setEditTarget(null)} />}
+
+      {/* Page header */}
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 14 }}>
+        <div>
+          <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 6 }}>
+            <h1 style={{ fontSize: 20, fontWeight: 700, color: "var(--foreground)", margin: 0 }}>HSBC Current Account</h1>
+            <Badge v="warning">In Progress</Badge>
+          </div>
+          <div style={{ fontSize: 13, color: "var(--muted-foreground)" }}>1 Apr – 30 Jun 2025 · hsbc_q2_2025.csv</div>
+        </div>
+        <div style={{ display: "flex", gap: 8 }}>
+          <Btn outline sm>⬒ Report</Btn>
+          <Btn grad onClick={canDone ? go : undefined} disabled={!canDone}>🛡 Review & Approve</Btn>
+        </div>
+      </div>
+
+      {/* Change 2: Balance header with editable Statement Balance */}
+      <div style={{ display: "flex", gap: 2, padding: "10px 0", marginBottom: 4 }}>
+        {/* Start Date */}
+        <div style={{ flex: 1, padding: "8px 14px", background: "var(--card)", borderRadius: "var(--radius)", border: "1px solid var(--border)" }}>
+          <div style={{ fontSize: 10, fontWeight: 600, color: "var(--muted-foreground)", textTransform: "uppercase", letterSpacing: ".06em", marginBottom: 2 }}>Start Date</div>
+          <div style={{ fontSize: 14, fontWeight: 600, color: "var(--foreground)" }}>1 Apr 2025</div>
+        </div>
+        {/* End Date */}
+        <div style={{ flex: 1, padding: "8px 14px", background: "var(--card)", borderRadius: "var(--radius)", border: "1px solid var(--border)" }}>
+          <div style={{ fontSize: 10, fontWeight: 600, color: "var(--muted-foreground)", textTransform: "uppercase", letterSpacing: ".06em", marginBottom: 2 }}>End Date</div>
+          <div style={{ fontSize: 14, fontWeight: 600, color: "var(--foreground)" }}>30 Jun 2025</div>
+        </div>
+        {/* Statement Balance — editable */}
+        <div style={{ flex: 1, padding: "8px 14px", background: "var(--card)", borderRadius: "var(--radius)", border: "1px solid var(--primary)" }}>
+          <div style={{ fontSize: 10, fontWeight: 600, color: "var(--primary)", textTransform: "uppercase", letterSpacing: ".06em", marginBottom: 2 }}>Statement Balance</div>
+          <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
+            <span style={{ fontSize: 14, fontWeight: 600, color: "var(--foreground)" }}>£</span>
+            <input
+              value={stmtBal}
+              onChange={e => setStmtBal(e.target.value)}
+              style={{ fontSize: 14, fontWeight: 600, color: "var(--foreground)", border: "none", outline: "none", background: "transparent", width: "100%", fontVariantNumeric: "tabular-nums" }}
+            />
+          </div>
+        </div>
+        {/* Beginning Balance — read-only */}
+        <div style={{ flex: 1, padding: "8px 14px", background: "var(--muted)", borderRadius: "var(--radius)", border: "1px solid var(--border)" }}>
+          <div style={{ fontSize: 10, fontWeight: 600, color: "var(--muted-foreground)", textTransform: "uppercase", letterSpacing: ".06em", marginBottom: 2 }}>Beginning Balance</div>
+          <div style={{ fontSize: 14, fontWeight: 600, color: "var(--foreground)" }}>£130,347.28</div>
+        </div>
+        {/* Matched */}
+        <div style={{ flex: 1, padding: "8px 14px", background: "var(--card)", borderRadius: "var(--radius)", border: "1px solid var(--border)" }}>
+          <div style={{ fontSize: 10, fontWeight: 600, color: "var(--muted-foreground)", textTransform: "uppercase", letterSpacing: ".06em", marginBottom: 2 }}>Matched</div>
+          <div style={{ fontSize: 14, fontWeight: 700, color: "var(--positive)" }}>{matched.length + resolved.length} of 33</div>
+        </div>
+        {/* Difference */}
+        <div style={{ flex: 1, padding: "8px 14px", background: diffZero ? "rgba(0,232,157,.04)" : "rgba(255,39,95,.03)", borderRadius: "var(--radius)", border: `1px solid ${diffZero ? "rgba(0,232,157,.2)" : "rgba(255,39,95,.15)"}` }}>
+          <div style={{ fontSize: 10, fontWeight: 600, color: "var(--muted-foreground)", textTransform: "uppercase", letterSpacing: ".06em", marginBottom: 2 }}>Difference</div>
+          <div style={{ fontSize: 14, fontWeight: 700, color: diffZero ? "var(--positive)" : "var(--destructive)" }}>
+            {diffZero ? "£0.00" : (diff < 0 ? "−" : "+") + "£" + Math.abs(diff).toLocaleString("en-GB", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+          </div>
+        </div>
+      </div>
+
+      {/* Column labels */}
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 180px 1fr", gap: 8, padding: "10px 18px 4px", borderTop: "1px solid var(--border)", marginTop: 4 }}>
+        <div style={{ fontSize: 11, fontWeight: 600, color: "var(--primary)", textTransform: "uppercase", letterSpacing: ".05em" }}>Fiskl Ledger</div>
+        <div style={{ fontSize: 11, fontWeight: 600, color: "var(--muted-foreground)", textTransform: "uppercase", textAlign: "center" }}>Confidence</div>
+        <div style={{ fontSize: 11, fontWeight: 600, color: "var(--muted-foreground)", textTransform: "uppercase", textAlign: "right", letterSpacing: ".05em" }}>Bank Statement</div>
+      </div>
+
+      {/* Needs Attention */}
+      <Crd style={{ marginBottom: 12, overflow: "hidden", borderColor: "rgba(255,89,5,.15)", background: "rgba(255,89,5,.01)" }}>
+        <SecHdr icon="⚠" color="var(--warning)" title="Needs Attention" itemCount={attention.length} open={attOpen} onToggle={() => setAttOpen(!attOpen)} />
+        {attOpen && (
+          <div style={{ padding: "0 14px 14px", display: "flex", flexDirection: "column", gap: 8 }}>
+            {attention.length === 0
+              ? <div style={{ textAlign: "center", padding: "20px 0", color: "var(--positive)", fontSize: 14, fontWeight: 600 }}>✓ All items resolved</div>
+              : attention.map(item => {
+                  const isNotInLedger = !item.L && !item.aiSuggested;
+                  const wasCreated = createdLedger[item.id];
+                  return (
+                    <div key={item.id} style={{ display: "grid", gridTemplateColumns: "1fr 180px 1fr", gap: 8 }}>
+                      {/* Left: Ledger side */}
+                      {item.type === "Duplicate" && item.L && item.L2
+                        ? (
+                          <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+                            <LedgerItem item={item.L} checked={selL.includes(item.id)} onCheck={() => toggleSelL(item.id)} onEdit={() => setEditTarget(item)} />
+                            <div style={{ fontSize: 10, fontWeight: 600, color: "var(--muted-foreground)", textAlign: "center", textTransform: "uppercase", letterSpacing: ".05em" }}>vs</div>
+                            <LedgerItem item={item.L2} checked={false} onCheck={() => {}} onEdit={() => setEditTarget({ ...item, L: item.L2, _editL2: true })} />
+                          </div>
+                        )
+                        : item.L
+                          ? <LedgerItem item={item.L} checked={selL.includes(item.id)} onCheck={() => toggleSelL(item.id)} onEdit={() => setEditTarget(item)} />
+                          : <div /> /* Change 4: empty left side */
+                      }
+
+                      {/* Center column */}
+                      {isNotInLedger || wasCreated
+                        ? /* Change 4: Not in ledger center */
+                          <NotInLedgerCenter
+                            statementItem={item.R}
+                            created={wasCreated}
+                            onCreated={stmtItem => handleCreateLedger(item.id, stmtItem)}
+                            onResolve={() => handleResolveCreated(item.id)}
+                          />
+                        : item.aiSuggested
+                          ? /* Change 3: two-action ConfBox */
+                            <ConfBox item={item} onAccept={item.type === "Duplicate" ? pickCandidate : acceptItem} onUpdate={updateItem} onResolveUpdated={resolveUpdated} onDismissBoth={dismissBoth} />
+                          : (
+                            <div style={{ display: "flex", alignItems: "center", justifyContent: "center" }}>
+                              <div style={{ padding: "8px 10px", borderRadius: "calc(var(--radius) + 4px)", border: "1px dashed var(--border)", background: "var(--muted)", textAlign: "center" }}>
+                                <div style={{ fontSize: 11, color: "var(--muted-foreground)", marginBottom: 4 }}>No match found</div>
+                                <div style={{ fontSize: 10, color: "var(--muted-foreground)" }}>Select & resolve manually</div>
+                              </div>
+                            </div>
+                          )
+                      }
+
+                      <StatementItem item={item.R} checked={selR.includes(item.id)} onCheck={() => toggleSelR(item.id)} />
+                    </div>
+                  );
+                })
+            }
+          </div>
+        )}
+      </Crd>
+
+      {/* Change 5: Resolve button above Auto Match section */}
+      {hasSelection && (
+        <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: 8 }}>
+          <Btn grad sm onClick={resolveSelected}>✓ Resolve Selected ({selL.length + selR.length})</Btn>
+        </div>
+      )}
+
+      {/* Auto Matched */}
+      <Crd style={{ marginBottom: 12, overflow: "hidden", borderColor: "rgba(0,232,157,.15)" }}>
+        <SecHdr icon="✓" color="var(--positive)" title="Auto Matched" itemCount={matched.length} totalAmt={matchTotal} open={matchOpen} onToggle={() => setMatchOpen(!matchOpen)} />
+        {matchOpen && (
+          <div style={{ padding: "0 14px 14px" }}>
+            {matched.map(m => (
+              <div key={m.id} style={{ display: "grid", gridTemplateColumns: "1fr 180px 1fr", gap: 8, padding: "6px 0", borderBottom: "1px solid var(--border)" }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                  <input type="checkbox" checked={true} onChange={() => uncheckMatched(m.id)} style={{ accentColor: "var(--positive)" }} title="Uncheck to move back" />
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ display: "flex", justifyContent: "space-between" }}>
+                      <span style={{ fontSize: 11, color: "var(--muted-foreground)" }}>{m.L.d}</span>
+                      <Amt a={m.L.a} sm />
+                    </div>
+                    <div style={{ fontSize: 12, fontWeight: 500, color: "var(--foreground)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{m.L.n}</div>
+                  </div>
+                </div>
+                <div style={{ display: "flex", alignItems: "center", justifyContent: "center", flexDirection: "column", gap: 3 }}>
+                  <Badge v="ai" xs>AI</Badge>
+                  <span style={{ fontSize: 11, fontWeight: 700, color: "var(--positive)" }}>{m.conf}%</span>
+                </div>
+                <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                  <input type="checkbox" checked={true} onChange={() => uncheckMatched(m.id)} style={{ accentColor: "var(--positive)" }} />
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ display: "flex", justifyContent: "space-between" }}>
+                      <span style={{ fontSize: 11, color: "var(--muted-foreground)" }}>{m.R.d}</span>
+                      <Amt a={m.R.a} sm />
+                    </div>
+                    <div style={{ fontSize: 12, fontWeight: 500, color: "var(--foreground)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{m.R.n}</div>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </Crd>
+
+      {/* Resolved */}
+      {resolved.length > 0 && (
+        <Crd style={{ marginBottom: 12, overflow: "hidden", borderColor: "rgba(0,120,255,.12)" }}>
+          <SecHdr icon="✓" color="var(--primary)" title="Resolved" itemCount={resolved.length} totalAmt={resolvedTotal} open={resolvedOpen} onToggle={() => setResolvedOpen(!resolvedOpen)} />
+          {resolvedOpen && (
+            <div style={{ padding: "0 14px 14px", display: "flex", flexDirection: "column", gap: 6 }}>
+              {resolved.map((r, i) => (
+                <div key={r.id || i} style={{ display: "grid", gridTemplateColumns: "1fr 180px 1fr", gap: 8, opacity: .65 }}>
+                  <Crd style={{ padding: "8px 10px" }}>
+                    {r.L ? <><div style={{ fontSize: 11, color: "var(--muted-foreground)" }}>{r.L.d}</div><div style={{ fontSize: 12, fontWeight: 500, color: "var(--foreground)" }}>{r.L.n}</div><Amt a={r.L.a} sm /></> : <span style={{ fontSize: 12, color: "var(--muted-foreground)" }}>—</span>}
+                  </Crd>
+                  <div style={{ display: "flex", alignItems: "center", justifyContent: "center" }}>
+                    <Badge v="positive" xs>{r.how}</Badge>
+                  </div>
+                  <Crd style={{ padding: "8px 10px" }}>
+                    {r.R ? <><div style={{ fontSize: 11, color: "var(--muted-foreground)" }}>{r.R.d}</div><div style={{ fontSize: 12, fontWeight: 500, color: "var(--foreground)" }}>{r.R.n}</div><Amt a={r.R.a} sm /></> : <span style={{ fontSize: 12, color: "var(--muted-foreground)" }}>—</span>}
+                  </Crd>
+                </div>
+              ))}
+            </div>
+          )}
+        </Crd>
+      )}
+
+      {/* Multi-select floating banner (manual resolve) */}
+      <BalanceBanner selL={selL} selR={selR} allItems={bannerItems} onResolve={resolveSelected} />
+    </div>
+  );
+}
+
+function Screen4({ go }) {
+  return (
+    <div>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 24 }}>
+        <div>
+          <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 4 }}>
+            <h1 style={{ fontSize: 20, fontWeight: 700, color: "var(--foreground)", margin: 0 }}>Reconciliation Report</h1>
+            <Badge v="positive">Approved</Badge>
+          </div>
+          <div style={{ fontSize: 13, color: "var(--muted-foreground)" }}>HSBC Current Account · Q2 2025</div>
+        </div>
+        <Btn outline onClick={go}>← Back to Accounts</Btn>
+      </div>
+      <Crd style={{ marginBottom: 20, padding: 24 }}>
+        <div style={{ display: "flex", gap: 32 }}>
+          <div style={{ flex: 1 }}>
+            <div style={{ fontSize: 10, fontWeight: 600, color: "var(--muted-foreground)", textTransform: "uppercase", letterSpacing: ".05em", marginBottom: 12 }}>Summary</div>
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
+              {[["Beginning","£130,347.28"],["Ending","£142,890.50"],["Ledger","£142,834.72"],["Difference","£0.00"]].map(([l,v],i) => (
+                <div key={i}><div style={{ fontSize: 11, color: "var(--muted-foreground)" }}>{l}</div><div style={{ fontSize: 17, fontWeight: 700, color: i === 3 ? "var(--positive)" : "var(--foreground)" }}>{v}</div></div>
+              ))}
+            </div>
+          </div>
+          <div style={{ width: 1, background: "var(--border)" }} />
+          <div style={{ flex: 1 }}>
+            <div style={{ fontSize: 10, fontWeight: 600, color: "var(--muted-foreground)", textTransform: "uppercase", letterSpacing: ".05em", marginBottom: 12 }}>AI Performance</div>
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
+              {[["Total","33","var(--foreground)"],["Auto","28 (85%)","var(--positive)"],["AI Assisted","4","var(--warning)"],["Manual","2","var(--primary)"]].map(([l,v,c]) => (
+                <div key={l}><div style={{ fontSize: 11, color: "var(--muted-foreground)" }}>{l}</div><div style={{ fontSize: 17, fontWeight: 700, color: c }}>{v}</div></div>
+              ))}
+            </div>
+          </div>
+        </div>
+      </Crd>
+      <Crd style={{ padding: 16 }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+          <div style={{ width: 32, height: 32, borderRadius: 99, background: C.grad, display: "flex", alignItems: "center", justifyContent: "center", color: "#fff", fontSize: 11, fontWeight: 700 }}>AL</div>
+          <div>
+            <div style={{ fontSize: 13, fontWeight: 600, color: "var(--foreground)" }}>Approved by Alina</div>
+            <div style={{ fontSize: 11, color: "var(--muted-foreground)" }}>30 Jun 2025 at 14:32 GMT</div>
+          </div>
+          <div style={{ marginLeft: "auto" }}><Badge v="positive">Reconciled</Badge></div>
+        </div>
+      </Crd>
+    </div>
+  );
+}
+
+// ── APP SHELL ──────────────────────────────────────────────────────────────
+export default function App() {
+  const [screen, setScreen] = useState(() => Number(new URLSearchParams(window.location.search).get('s') || 3));
+  const [collapsed, setCollapsed] = useState(false);
+
+  return (
+    <ErrorBoundary>
+      <style>{`
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+
+        *, *::before, *::after { box-sizing: border-box; }
+        body { margin: 0; font-family: Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; }
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+        /* Fiskl globals.css tokens */
+        :root {
+          --background: oklch(1 0 0);
+          --foreground: oklch(0.1993 0.0541 272.68);
+          --card: oklch(1 0 0);
+          --card-foreground: oklch(0.1993 0.0541 272.68);
+          --popover: oklch(1 0 0);
+          --popover-foreground: oklch(0.1993 0.0541 272.68);
+          --primary: oklch(60.06% 0.2248 257.64);
+          --primary-foreground: oklch(0.9659 0.0209 227.52);
+          --secondary: oklch(0.967 0.021 224.742);
+          --secondary-foreground: oklch(0.204 0.051 272.656);
+          --muted: oklch(0.9774 0.0042 236.5);
+          --muted-foreground: oklch(0.5299 0.0425 263.39);
+          --accent: oklch(0.9493 0.0103 247.94);
+          --accent-foreground: oklch(0.1993 0.0541 272.68);
+          --destructive: oklch(0.6537 0.2329 21.74);
+          --destructive-foreground: oklch(0.9594 0.0267 340.85);
+          --border: oklch(0.9283 0.0055 274.96);
+          --input: oklch(0.8368 0.0305 262.52);
+          --ring: oklch(60.06% 0.2248 257.64);
+          --warning: oklch(0.6804 0.214 39.54);
+          --warning-foreground: oklch(0.9482 0.037 68.66);
+          --positive: oklch(0.6895 0.1494 162.47);
+          --positive-foreground: oklch(0.9718 0.0266 185.19);
+          --tooltip: oklch(0.1993 0.0541 272.68);
+          --tooltip-foreground: oklch(1 0 0);
+          --sidebar: oklch(0.9846 0.0017 247.84);
+          --sidebar-foreground: oklch(0.3063 0.0588 271.91);
+          --sidebar-primary: oklch(0.598 0.22 257.871);
+          --sidebar-primary-foreground: oklch(1 0 89.876);
+          --sidebar-accent: oklch(0.967 0.0029 264.54);
+          --sidebar-accent-foreground: oklch(0.1993 0.0541 272.68);
+          --sidebar-border: oklch(0.9283 0.0055 274.96);
+          --radius: 0.5rem;
+        }
+      `}</style>
+
+      <div style={{ display: "flex", height: "100vh", background: "var(--background)", color: "var(--foreground)" }}>
+        <Sidebar collapsed={collapsed} onToggle={() => setCollapsed(c => !c)} />
+
+        <div style={{ flex: 1, display: "flex", flexDirection: "column", minWidth: 0, overflow: "hidden" }}>
+          <SiteHeader
+            collapsed={collapsed}
+            onToggleCollapse={() => setCollapsed(c => !c)}
+            screen={screen}
+            onScreenChange={setScreen}
+          />
+
+          <main style={{ flex: 1, overflowY: "auto", padding: "24px 24px 120px" }}>
+            {screen > 1 && screen !== 4 && (
+              <button onClick={() => setScreen(s => s - 1)} style={{ display: "flex", alignItems: "center", gap: 4, padding: "4px 0", background: "transparent", border: "none", fontSize: 12, color: "var(--muted-foreground)", cursor: "pointer", marginBottom: 12 }}>
+                ← Back
+              </button>
+            )}
+            {screen === 1 && <Screen1 go={() => setScreen(2)} />}
+            {screen === 2 && <Screen2 go={() => setScreen(3)} />}
+            {screen === 3 && <Screen3 go={() => setScreen(4)} />}
+            {screen === 4 && <Screen4 go={() => setScreen(1)} />}
+          </main>
+        </div>
+      </div>
+    </ErrorBoundary>
+  );
+}
