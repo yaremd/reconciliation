@@ -3,6 +3,7 @@ import {
   Home, ShoppingBag, ShoppingCart, PieChart, Package, Wallet, Users, Settings,
   ChevronRight, ChevronDown, PanelLeft, ArrowLeft, MoreVertical, LogOut,
   Eye, EyeOff, Sun, CreditCard, Layers, Shield, KeyRound, HelpCircle, User, SlidersHorizontal,
+  Pencil, Check, X, Search, Plus, Minus,
 } from "lucide-react";
 
 // ── Error Boundary ─────────────────────────────────────────────────────────
@@ -92,7 +93,12 @@ function Btn({ onClick, disabled, grad, outline, blue, sm, xs, children }) {
       border: "none", borderRadius: "var(--radius)",
       fontSize: sm ? 13 : xs ? 11 : 14, fontWeight: 600,
       cursor: disabled ? "not-allowed" : "pointer",
-    }}>
+      boxShadow: disabled ? "none" : "0 1px 3px rgba(0,88,255,.25)",
+      transition: "opacity .15s, box-shadow .15s",
+    }}
+      onMouseEnter={e => { if (!disabled) e.currentTarget.style.opacity = ".9"; }}
+      onMouseLeave={e => { e.currentTarget.style.opacity = "1"; }}
+    >
       {children}
     </button>
   );
@@ -105,7 +111,11 @@ function Btn({ onClick, disabled, grad, outline, blue, sm, xs, children }) {
       border: `1px solid ${blue ? "var(--primary)" : "var(--border)"}`,
       borderRadius: "var(--radius)",
       fontSize: sm ? 12 : xs ? 11 : 13, fontWeight: 500, cursor: "pointer",
-    }}>
+      transition: "background .15s, color .15s",
+    }}
+      onMouseEnter={e => { e.currentTarget.style.background = "var(--accent)"; }}
+      onMouseLeave={e => { e.currentTarget.style.background = "transparent"; }}
+    >
       {children}
     </button>
   );
@@ -115,7 +125,11 @@ function Btn({ onClick, disabled, grad, outline, blue, sm, xs, children }) {
       padding: "4px 8px", background: "transparent",
       color: "var(--primary)", border: "none",
       borderRadius: "var(--radius)", fontSize: 13, fontWeight: 500, cursor: "pointer",
-    }}>
+      transition: "background .15s",
+    }}
+      onMouseEnter={e => { e.currentTarget.style.background = "var(--accent)"; }}
+      onMouseLeave={e => { e.currentTarget.style.background = "transparent"; }}
+    >
       {children}
     </button>
   );
@@ -127,6 +141,7 @@ function Crd({ children, style, onClick }) {
       background: "var(--card)",
       border: "1px solid var(--border)",
       borderRadius: "calc(var(--radius) + 4px)",
+      boxShadow: "0 1px 3px rgba(0,0,0,.06), 0 1px 2px rgba(0,0,0,.04)",
     }, style || {})}>
       {children}
     </div>
@@ -211,7 +226,7 @@ function DropdownMenu({ trigger, items, align = "end" }) {
           ...(align === "end" ? { right: 0 } : { left: 0 }),
           bottom: "calc(100% + 4px)",
           zIndex: 200, minWidth: 220,
-          background: "var(--popover)", color: "var(--popover-foreground)",
+          background: "var(--card)", color: "var(--card-foreground)",
           border: "1px solid var(--border)",
           borderRadius: "calc(var(--radius) + 2px)",
           boxShadow: "0 8px 24px rgba(0,0,0,.12)",
@@ -260,7 +275,15 @@ function EditModal({ tx, onSave, onClose }) {
       <Crd style={{ width: 420, padding: 28, boxShadow: "0 20px 60px rgba(0,0,0,.2)" }} onClick={e => e.stopPropagation()}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
           <h2 style={{ margin: 0, fontSize: 16, fontWeight: 700, color: "var(--foreground)" }}>Edit Transaction</h2>
-          <button onClick={onClose} style={{ background: "none", border: "none", fontSize: 20, color: "var(--muted-foreground)", cursor: "pointer", lineHeight: 1 }}>×</button>
+          <button onClick={onClose} style={{
+            background: "transparent", border: "1px solid var(--border)",
+            borderRadius: "var(--radius)", padding: 4, cursor: "pointer",
+            color: "var(--muted-foreground)", display: "flex", alignItems: "center",
+            transition: "background .15s",
+          }}
+            onMouseEnter={e => e.currentTarget.style.background = "var(--accent)"}
+            onMouseLeave={e => e.currentTarget.style.background = "transparent"}
+          ><X size={14} /></button>
         </div>
         {[["Description", "n", "text"], ["Date", "d", "text"], ["Amount (£)", "a", "number"], ["Category", "cat", "text"]].map(([label, key, type]) => (
           <div key={key} style={{ marginBottom: 14 }}>
@@ -272,8 +295,10 @@ function EditModal({ tx, onSave, onClose }) {
                 width: "100%", padding: "8px 10px",
                 border: "1px solid var(--input)", borderRadius: "var(--radius)",
                 fontSize: 13, color: "var(--foreground)", background: "var(--background)",
-                outline: "none", boxSizing: "border-box",
+                outline: "none", boxSizing: "border-box", transition: "border-color .15s",
               }}
+              onFocus={e => e.target.style.borderColor = "var(--primary)"}
+              onBlur={e => e.target.style.borderColor = "var(--input)"}
             />
           </div>
         ))}
@@ -369,7 +394,11 @@ function ConfBox({ item, onAccept, onUpdate, onResolveUpdated, onDismissBoth }) 
           color: "#fff", border: "none",
           borderRadius: "var(--radius)", fontSize: 11, fontWeight: 600, cursor: "pointer",
           display: "flex", alignItems: "center", justifyContent: "center", gap: 4,
-        }}>✓ Resolve</button>
+          transition: "opacity .15s",
+        }}
+          onMouseEnter={e => e.currentTarget.style.opacity = ".88"}
+          onMouseLeave={e => e.currentTarget.style.opacity = "1"}
+        ><Check size={11} /> Resolve</button>
       </div>
     );
   }
@@ -404,12 +433,21 @@ function ConfBox({ item, onAccept, onUpdate, onResolveUpdated, onDismissBoth }) 
           width: "100%", padding: "5px 6px", background: "var(--primary)",
           color: "#fff", border: "none",
           borderRadius: "var(--radius)", fontSize: 11, fontWeight: 600, cursor: "pointer",
-        }}>✓ Resolve</button>
+          display: "flex", alignItems: "center", justifyContent: "center", gap: 4,
+          transition: "opacity .15s",
+        }}
+          onMouseEnter={e => e.currentTarget.style.opacity = ".88"}
+          onMouseLeave={e => e.currentTarget.style.opacity = "1"}
+        ><Check size={11} /> Resolve</button>
         <button onClick={e => { e.stopPropagation(); onDismissBoth(item); }} style={{
           width: "100%", padding: "5px 6px", background: "transparent",
           color: "var(--muted-foreground)", border: "1px solid var(--border)",
           borderRadius: "var(--radius)", fontSize: 11, fontWeight: 600, cursor: "pointer",
-        }}>Ignore Duplication</button>
+          transition: "background .15s",
+        }}
+          onMouseEnter={e => e.currentTarget.style.background = "var(--accent)"}
+          onMouseLeave={e => e.currentTarget.style.background = "transparent"}
+        >Ignore Duplication</button>
       </div>
     );
   }
@@ -434,12 +472,22 @@ function ConfBox({ item, onAccept, onUpdate, onResolveUpdated, onDismissBoth }) 
             flex: 1, padding: "5px 4px", background: "rgba(0,232,157,.12)",
             color: "#00AD68", border: "1px solid rgba(0,232,157,.4)",
             borderRadius: "var(--radius)", fontSize: 11, fontWeight: 600, cursor: "pointer",
-          }}>✓ Accept</button>
+            display: "flex", alignItems: "center", justifyContent: "center", gap: 3,
+            transition: "background .15s",
+          }}
+            onMouseEnter={e => e.currentTarget.style.background = "rgba(0,232,157,.22)"}
+            onMouseLeave={e => e.currentTarget.style.background = "rgba(0,232,157,.12)"}
+          ><Check size={10} /> Accept</button>
           <button onClick={e => { e.stopPropagation(); onUpdate(item); }} style={{
             flex: 1, padding: "5px 4px", background: "rgba(0,120,255,.08)",
             color: "var(--primary)", border: "1px solid rgba(0,120,255,.35)",
             borderRadius: "var(--radius)", fontSize: 11, fontWeight: 600, cursor: "pointer",
-          }}>↑ Update</button>
+            display: "flex", alignItems: "center", justifyContent: "center", gap: 3,
+            transition: "background .15s",
+          }}
+            onMouseEnter={e => e.currentTarget.style.background = "rgba(0,120,255,.16)"}
+            onMouseLeave={e => e.currentTarget.style.background = "rgba(0,120,255,.08)"}
+          ><ChevronRight size={10} /> Update</button>
         </div>
       </div>
     </Tooltip>
@@ -451,16 +499,24 @@ function LedgerItem({ item, checked, onCheck, onEdit }) {
   return (
     <Crd style={{ padding: "10px 12px", borderColor: checked ? "var(--primary)" : "var(--border)", background: checked ? "rgba(0,120,255,.02)" : "var(--card)" }}>
       <div style={{ display: "flex", alignItems: "flex-start", gap: 8 }}>
-        <input type="checkbox" checked={checked} onChange={onCheck} style={{ marginTop: 2, accentColor: "var(--positive)", cursor: "pointer", flexShrink: 0 }} />
+        <input type="checkbox" checked={checked} onChange={onCheck} style={{ marginTop: 3, accentColor: "var(--primary)", cursor: "pointer", flexShrink: 0 }} />
         <div style={{ flex: 1, minWidth: 0 }}>
           <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 2 }}>
             <span style={{ fontSize: 11, color: "var(--muted-foreground)" }}>{item.d}</span>
             <Amt a={item.a} sm />
           </div>
-          <div style={{ fontSize: 13, fontWeight: 600, color: "var(--foreground)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{item.n}</div>
-          {item.cat && <div style={{ fontSize: 11, color: "var(--muted-foreground)", marginTop: 1 }}>{item.cat}</div>}
+          <div style={{ fontSize: 13, fontWeight: 500, color: "var(--foreground)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{item.n}</div>
+          {item.cat && <div style={{ fontSize: 11, color: "var(--muted-foreground)", marginTop: 2 }}>{item.cat}</div>}
         </div>
-        <button onClick={e => { e.stopPropagation(); onEdit(); }} style={{ flexShrink: 0, padding: "3px 6px", background: "transparent", border: "1px solid var(--border)", borderRadius: "var(--radius)", cursor: "pointer", fontSize: 11, color: "var(--muted-foreground)" }}>✎</button>
+        <button onClick={e => { e.stopPropagation(); onEdit(); }} style={{
+          flexShrink: 0, padding: "4px", background: "transparent",
+          border: "1px solid var(--border)", borderRadius: "var(--radius)",
+          cursor: "pointer", color: "var(--muted-foreground)",
+          display: "flex", alignItems: "center", transition: "background .15s, color .15s",
+        }}
+          onMouseEnter={e => { e.currentTarget.style.background = "var(--accent)"; e.currentTarget.style.color = "var(--foreground)"; }}
+          onMouseLeave={e => { e.currentTarget.style.background = "transparent"; e.currentTarget.style.color = "var(--muted-foreground)"; }}
+        ><Pencil size={11} /></button>
       </div>
     </Crd>
   );
@@ -475,13 +531,13 @@ function StatementItem({ item, checked, onCheck }) {
   return (
     <Crd style={{ padding: "10px 12px", borderColor: checked ? "var(--primary)" : "var(--border)", background: checked ? "rgba(0,120,255,.02)" : "var(--card)" }}>
       <div style={{ display: "flex", alignItems: "flex-start", gap: 8 }}>
-        <input type="checkbox" checked={checked} onChange={onCheck} style={{ marginTop: 2, accentColor: "var(--positive)", cursor: "pointer", flexShrink: 0 }} />
+        <input type="checkbox" checked={checked} onChange={onCheck} style={{ marginTop: 3, accentColor: "var(--primary)", cursor: "pointer", flexShrink: 0 }} />
         <div style={{ flex: 1, minWidth: 0 }}>
           <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 2 }}>
             <span style={{ fontSize: 11, color: "var(--muted-foreground)" }}>{item.d}</span>
             <Amt a={item.a} sm />
           </div>
-          <div style={{ fontSize: 13, fontWeight: 600, color: "var(--foreground)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{item.n}</div>
+          <div style={{ fontSize: 13, fontWeight: 500, color: "var(--foreground)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{item.n}</div>
         </div>
       </div>
     </Crd>
@@ -500,11 +556,15 @@ function NotInLedgerCenter({ statementItem, onCreated, onResolve, created }) {
       <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 8,
         padding: "14px 10px", border: "1px solid rgba(0,232,157,.25)", borderRadius: "calc(var(--radius) + 4px)",
         background: "rgba(0,232,157,.03)" }}>
-        <div style={{ fontSize: 11, fontWeight: 600, color: "var(--positive)" }}>✓ Transaction Created</div>
+        <div style={{ fontSize: 11, fontWeight: 600, color: "var(--positive)", display: "flex", alignItems: "center", gap: 4 }}><Check size={12} /> Transaction Created</div>
         <button onClick={e => { e.stopPropagation(); onResolve(); }} style={{
           padding: "5px 14px", background: "var(--primary)", color: "#fff",
           border: "none", borderRadius: "var(--radius)", fontSize: 11, fontWeight: 600, cursor: "pointer",
-        }}>✓ Resolve</button>
+          display: "flex", alignItems: "center", gap: 4, transition: "opacity .15s",
+        }}
+          onMouseEnter={e => e.currentTarget.style.opacity = ".88"}
+          onMouseLeave={e => e.currentTarget.style.opacity = "1"}
+        ><Check size={11} /> Resolve</button>
       </div>
     );
   }
@@ -532,16 +592,27 @@ function SecHdr({ icon, color, title, itemCount, totalAmt, open, onToggle }) {
   return (
     <div onClick={onToggle} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "12px 18px", cursor: onToggle ? "pointer" : "default", userSelect: "none" }}>
       <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-        <span style={{ color }}>{icon}</span>
-        <span style={{ fontSize: 14, fontWeight: 700, color }}>{title}</span>
+        <span style={{ color, display: "flex", alignItems: "center" }}>{icon}</span>
+        <span style={{ fontSize: 13, fontWeight: 600, color }}>{title}</span>
         {itemCount != null && (
-          <span style={{ fontSize: 13, color: "var(--muted-foreground)" }}>
-            · {itemCount} item{itemCount !== 1 ? "s" : ""}
-            {totalAmt != null ? " · " + fmtGbp(totalAmt) : ""}
-          </span>
+          <span style={{
+            display: "inline-flex", alignItems: "center",
+            padding: "1px 7px", borderRadius: 999,
+            background: "var(--muted)", border: "1px solid var(--border)",
+            fontSize: 11, fontWeight: 600, color: "var(--muted-foreground)",
+          }}>{itemCount}</span>
+        )}
+        {totalAmt != null && (
+          <span style={{ fontSize: 12, color: "var(--muted-foreground)", fontVariantNumeric: "tabular-nums" }}>{fmtGbp(totalAmt)}</span>
         )}
       </div>
-      {onToggle && <span style={{ color: "var(--muted-foreground)", fontSize: 12 }}>{open ? "▲" : "▼"}</span>}
+      {onToggle && (
+        <ChevronDown size={15} style={{
+          color: "var(--muted-foreground)",
+          transform: open ? "rotate(0deg)" : "rotate(-90deg)",
+          transition: "transform .2s",
+        }} />
+      )}
     </div>
   );
 }
@@ -881,16 +952,17 @@ function SiteHeader({ collapsed, onToggleCollapse, screen, onScreenChange }) {
 
         <Separator vertical />
 
-        {/* Tabs */}
-        <div style={{ display: "flex", gap: 1 }}>
+        {/* Tabs — shadcn-style pill */}
+        <div style={{ display: "flex", gap: 1, background: "var(--muted)", borderRadius: "var(--radius)", padding: "3px" }}>
           {[1,2,3,4].map(n => (
             <button key={n} onClick={() => onScreenChange(n)} style={{
-              padding: "5px 10px", background: "transparent", border: "none",
-              borderRadius: "var(--radius)",
+              padding: "4px 10px",
+              background: screen === n ? "var(--background)" : "transparent",
+              border: "none", borderRadius: "calc(var(--radius) - 2px)",
               fontSize: 12, fontWeight: screen === n ? 600 : 400,
-              color: screen === n ? "var(--primary)" : "var(--muted-foreground)",
-              cursor: "pointer",
-              borderBottom: screen === n ? "2px solid var(--primary)" : "2px solid transparent",
+              color: screen === n ? "var(--foreground)" : "var(--muted-foreground)",
+              cursor: "pointer", transition: "background .15s, color .15s",
+              boxShadow: screen === n ? "0 1px 3px rgba(0,0,0,.08)" : "none",
             }}>
               {n}. {["Open","Upload","Reconcile","Report"][n-1]}
             </button>
@@ -1291,32 +1363,45 @@ function Screen3({ go }) {
         <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
           <div style={{ fontSize: 11, fontWeight: 600, color: "var(--primary)", textTransform: "uppercase", letterSpacing: ".05em" }}>Fiskl Ledger</div>
           <div style={{ display: "flex", gap: 4, alignItems: "center" }}>
-            <input
-              value={searchL}
-              onChange={e => setSearchL(e.target.value)}
-              placeholder="Search ledger…"
-              style={{
-                flex: 1, padding: "5px 9px", fontSize: 12,
-                border: "1px solid var(--border)", borderRadius: "var(--radius)",
-                background: "var(--background)", color: "var(--foreground)",
-                outline: "none",
+            <div style={{ flex: 1, position: "relative", display: "flex", alignItems: "center" }}>
+              <Search size={12} style={{ position: "absolute", left: 8, color: "var(--muted-foreground)", pointerEvents: "none" }} />
+              <input
+                value={searchL}
+                onChange={e => setSearchL(e.target.value)}
+                placeholder="Search ledger…"
+                style={{
+                  width: "100%", padding: "5px 9px 5px 26px", fontSize: 12,
+                  border: "1px solid var(--border)", borderRadius: "var(--radius)",
+                  background: "var(--background)", color: "var(--foreground)",
+                  outline: "none", transition: "border-color .15s",
+                }}
+                onFocus={e => e.target.style.borderColor = "var(--primary)"}
+                onBlur={e => e.target.style.borderColor = "var(--border)"}
+              />
+            </div>
+            <Tooltip content="Add income" side="top">
+              <button onClick={() => flash("Income transaction added")} style={{
+                width: 28, height: 28, borderRadius: "var(--radius)",
+                background: "var(--primary)", color: "#fff",
+                border: "none", cursor: "pointer",
+                display: "flex", alignItems: "center", justifyContent: "center",
+                transition: "opacity .15s",
               }}
-            />
-            <Tooltip content="Add income transaction" side="top">
-              <button onClick={() => flash("+ Income transaction added")} style={{
-                width: 28, height: 28, borderRadius: "var(--radius)",
-                background: "var(--primary)", color: "#fff",
-                border: "none", fontSize: 16, fontWeight: 700,
-                cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", lineHeight: 1,
-              }}>+</button>
+                onMouseEnter={e => e.currentTarget.style.opacity = ".85"}
+                onMouseLeave={e => e.currentTarget.style.opacity = "1"}
+              ><Plus size={14} /></button>
             </Tooltip>
-            <Tooltip content="Add expense transaction" side="top">
-              <button onClick={() => flash("− Expense transaction added")} style={{
+            <Tooltip content="Add expense" side="top">
+              <button onClick={() => flash("Expense transaction added")} style={{
                 width: 28, height: 28, borderRadius: "var(--radius)",
                 background: "var(--primary)", color: "#fff",
-                border: "none", fontSize: 18, fontWeight: 700,
-                cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", lineHeight: 1,
-              }}>−</button>
+                border: "none", cursor: "pointer",
+                display: "flex", alignItems: "center", justifyContent: "center",
+                transition: "opacity .15s",
+              }}
+                onMouseEnter={e => e.currentTarget.style.opacity = ".85"}
+                onMouseLeave={e => e.currentTarget.style.opacity = "1"}
+              ><Minus size={14} /></button>
             </Tooltip>
           </div>
         </div>
@@ -1327,17 +1412,22 @@ function Screen3({ go }) {
         {/* Right: label + search */}
         <div style={{ display: "flex", flexDirection: "column", gap: 6, alignItems: "flex-end" }}>
           <div style={{ fontSize: 11, fontWeight: 600, color: "var(--muted-foreground)", textTransform: "uppercase", letterSpacing: ".05em" }}>Bank Statement</div>
-          <input
-            value={searchR}
-            onChange={e => setSearchR(e.target.value)}
-            placeholder="Search statement…"
-            style={{
-              width: "100%", padding: "5px 9px", fontSize: 12,
-              border: "1px solid var(--border)", borderRadius: "var(--radius)",
-              background: "var(--background)", color: "var(--foreground)",
-              outline: "none",
-            }}
-          />
+          <div style={{ width: "100%", position: "relative", display: "flex", alignItems: "center" }}>
+            <Search size={12} style={{ position: "absolute", left: 8, color: "var(--muted-foreground)", pointerEvents: "none" }} />
+            <input
+              value={searchR}
+              onChange={e => setSearchR(e.target.value)}
+              placeholder="Search statement…"
+              style={{
+                width: "100%", padding: "5px 9px 5px 26px", fontSize: 12,
+                border: "1px solid var(--border)", borderRadius: "var(--radius)",
+                background: "var(--background)", color: "var(--foreground)",
+                outline: "none", transition: "border-color .15s",
+              }}
+              onFocus={e => e.target.style.borderColor = "var(--primary)"}
+              onBlur={e => e.target.style.borderColor = "var(--border)"}
+            />
+          </div>
         </div>
       </div>
 
@@ -1568,9 +1658,19 @@ export default function App() {
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
 
         *, *::before, *::after { box-sizing: border-box; }
-        body { margin: 0; font-family: Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; }
+        body { margin: 0; font-family: Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; -webkit-font-smoothing: antialiased; }
         button, input, select, textarea { font-family: inherit; }
         @keyframes spin { to { transform: rotate(360deg); } }
+
+        /* Smooth scrollbar */
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 99px; }
+        ::-webkit-scrollbar-thumb:hover { background: var(--input); }
+
+        /* Focus-visible ring */
+        :focus-visible { outline: 2px solid var(--primary); outline-offset: 2px; border-radius: var(--radius); }
+        button:focus-visible { outline: 2px solid var(--primary); outline-offset: 2px; }
 
         /* Fiskl globals.css tokens */
         :root {
