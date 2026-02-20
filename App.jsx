@@ -329,7 +329,7 @@ function BalanceBanner({ selL, selR, allItems, onResolve }) {
 
 // ── Confidence Box — two-action model (Change 3) ───────────────────────────
 function ConfBox({ item, onAccept, onUpdate, onResolveUpdated, onDismissBoth }) {
-  const barColor = item.conf >= 90 ? "var(--positive)" : item.conf >= 70 ? "var(--warning)" : "var(--destructive)";
+  const confColor = item.conf >= 90 ? "var(--positive)" : item.conf >= 70 ? "var(--warning)" : "var(--destructive)";
 
   // Build update explanation per anomaly type
   function updateExplanation(it) {
@@ -343,13 +343,13 @@ function ConfBox({ item, onAccept, onUpdate, onResolveUpdated, onDismissBoth }) 
     return it.ex || "";
   }
 
+  // Tooltip shows only AI explanation — no action buttons
   const tooltipContent = (
-    <div style={{ fontSize: 12, maxWidth: 220 }}>
+    <div style={{ fontSize: 12, maxWidth: 230, lineHeight: 1.5 }}>
       <div style={{ fontSize: 10, fontWeight: 600, opacity: .6, marginBottom: 5, textTransform: "uppercase", letterSpacing: ".05em" }}>AI Analysis</div>
-      <div style={{ marginBottom: 6, lineHeight: 1.5 }}>{item.ex}</div>
-      <div style={{ display: "flex", gap: 4, alignItems: "center" }}>
-        <Badge v={item.conf >= 80 ? "warning" : "critical"} xs>{item.type}</Badge>
-        <span style={{ opacity: .6 }}>{item.conf}%</span>
+      <div style={{ marginBottom: 8 }}>{item.ex}</div>
+      <div style={{ fontSize: 10, opacity: .6 }}>
+        <strong>Accept</strong> — keep as-is &nbsp;·&nbsp; <strong>Update</strong> — apply AI suggestion
       </div>
     </div>
   );
@@ -374,71 +374,73 @@ function ConfBox({ item, onAccept, onUpdate, onResolveUpdated, onDismissBoth }) 
     );
   }
 
-  // Duplicate — N competing ledger candidates for one statement entry
+  // TASK-03: Duplicate — N competing ledger candidates for one statement entry
   if (item.type === "Duplicate") {
     const candidates = item.candidates || [item.L];
+    const dupTooltip = (
+      <div style={{ fontSize: 12, maxWidth: 220, lineHeight: 1.5 }}>
+        Select the entries you want to keep. The rest will be deleted.
+      </div>
+    );
     return (
       <div style={{
         width: "100%", padding: "10px", borderRadius: "calc(var(--radius) + 4px)",
         border: "1px solid rgba(255,89,5,.3)", background: "rgba(255,89,5,.04)",
         display: "flex", flexDirection: "column", gap: 8, boxSizing: "border-box",
       }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-          <div style={{ flex: 1, height: 4, borderRadius: 99, background: "var(--border)", overflow: "hidden" }}>
-            <div style={{ width: item.conf + "%", height: "100%", background: "var(--warning)", borderRadius: 99, transition: "width .4s" }} />
-          </div>
-          <span style={{ fontSize: 12, fontWeight: 700, color: "var(--warning)", minWidth: 32, textAlign: "right" }}>{item.conf}%</span>
-        </div>
-        <div style={{ display: "flex", justifyContent: "center" }}>
+        {/* % left · badge right — no progress bar */}
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+          <span style={{ fontSize: 13, fontWeight: 700, color: "var(--warning)" }}>{item.conf}%</span>
           <Badge v="warning" xs>Duplicate</Badge>
         </div>
         <div style={{ fontSize: 10, color: "var(--muted-foreground)", textAlign: "center", lineHeight: 1.4 }}>
-          {candidates.length} ledger entries · 1 statement line
+          <Tooltip content={dupTooltip} side="top">
+            <span style={{ cursor: "default", borderBottom: "1px dashed var(--muted-foreground)" }}>
+              {candidates.length} entries · select to keep
+            </span>
+          </Tooltip>
         </div>
-        <div style={{ fontSize: 10, color: "var(--muted-foreground)", textAlign: "center" }}>
-          Click a card to use it
-        </div>
+        <button onClick={e => { e.stopPropagation(); onAccept(item, 0); }} style={{
+          width: "100%", padding: "5px 6px", background: "var(--primary)",
+          color: "#fff", border: "none",
+          borderRadius: "var(--radius)", fontSize: 11, fontWeight: 600, cursor: "pointer",
+        }}>✓ Resolve</button>
         <button onClick={e => { e.stopPropagation(); onDismissBoth(item); }} style={{
           width: "100%", padding: "5px 6px", background: "transparent",
           color: "var(--muted-foreground)", border: "1px solid var(--border)",
           borderRadius: "var(--radius)", fontSize: 11, fontWeight: 600, cursor: "pointer",
-        }}>✕ Dismiss All</button>
+        }}>Ignore Duplication</button>
       </div>
     );
   }
 
+  // Normal AI anomaly — buttons always visible in the box, tooltip shows explanation only
   return (
     <Tooltip content={tooltipContent}>
       <div style={{
         width: "100%", padding: "10px", borderRadius: "calc(var(--radius) + 4px)",
         border: "1px solid var(--border)", background: "var(--muted)",
         display: "flex", flexDirection: "column", gap: 8, boxSizing: "border-box",
+        cursor: "default",
       }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-          <div style={{ flex: 1, height: 4, borderRadius: 99, background: "var(--border)", overflow: "hidden" }}>
-            <div style={{ width: item.conf + "%", height: "100%", background: barColor, borderRadius: 99, transition: "width .4s" }} />
-          </div>
-          <span style={{ fontSize: 12, fontWeight: 700, color: barColor, minWidth: 32, textAlign: "right" }}>{item.conf}%</span>
-        </div>
-        <div style={{ display: "flex", justifyContent: "center" }}>
+        {/* % left · type badge right — no progress bar */}
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+          <span style={{ fontSize: 13, fontWeight: 700, color: confColor }}>{item.conf}%</span>
           <Badge v={item.conf >= 80 ? "warning" : "critical"} xs>{item.type}</Badge>
         </div>
-        {/* Two-action buttons */}
-        <div style={{ display: "flex", gap: 6 }}>
+        {/* Action buttons always in the box */}
+        <div style={{ display: "flex", gap: 5 }}>
           <button onClick={e => { e.stopPropagation(); onAccept(item); }} style={{
-            flex: 1, padding: "5px 6px", background: "transparent",
-            color: "var(--positive)", border: "1px solid rgba(0,232,157,.4)",
+            flex: 1, padding: "5px 4px", background: "rgba(0,232,157,.12)",
+            color: "#00AD68", border: "1px solid rgba(0,232,157,.4)",
             borderRadius: "var(--radius)", fontSize: 11, fontWeight: 600, cursor: "pointer",
-            display: "flex", alignItems: "center", justifyContent: "center", gap: 3,
           }}>✓ Accept</button>
           <button onClick={e => { e.stopPropagation(); onUpdate(item); }} style={{
-            flex: 1, padding: "5px 6px", background: "transparent",
+            flex: 1, padding: "5px 4px", background: "rgba(0,120,255,.08)",
             color: "var(--primary)", border: "1px solid rgba(0,120,255,.35)",
             borderRadius: "var(--radius)", fontSize: 11, fontWeight: 600, cursor: "pointer",
-            display: "flex", alignItems: "center", justifyContent: "center", gap: 3,
           }}>↑ Update</button>
         </div>
-        <div style={{ fontSize: 10, color: "var(--muted-foreground)", textAlign: "center" }}>Hover for details</div>
       </div>
     </Tooltip>
   );
@@ -486,9 +488,7 @@ function StatementItem({ item, checked, onCheck }) {
   );
 }
 
-// Change 4 — Not In Ledger: empty left side, centered Create Transaction button
-// This component renders the CENTER column for "not in ledger" rows.
-// The left side is rendered as null (empty) by Screen3.
+/// TASK-04: Missing Transaction box — dashed border, label, gradient Create button
 function NotInLedgerCenter({ statementItem, onCreated, onResolve, created }) {
   const [loading, setLoading] = useState(false);
   function handleCreate() {
@@ -497,16 +497,22 @@ function NotInLedgerCenter({ statementItem, onCreated, onResolve, created }) {
   }
   if (created) {
     return (
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "center" }}>
+      <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 8,
+        padding: "14px 10px", border: "1px solid rgba(0,232,157,.25)", borderRadius: "calc(var(--radius) + 4px)",
+        background: "rgba(0,232,157,.03)" }}>
+        <div style={{ fontSize: 11, fontWeight: 600, color: "var(--positive)" }}>✓ Transaction Created</div>
         <button onClick={e => { e.stopPropagation(); onResolve(); }} style={{
-          padding: "6px 16px", background: "var(--primary)", color: "#fff",
-          border: "none", borderRadius: "var(--radius)", fontSize: 12, fontWeight: 600, cursor: "pointer",
+          padding: "5px 14px", background: "var(--primary)", color: "#fff",
+          border: "none", borderRadius: "var(--radius)", fontSize: 11, fontWeight: 600, cursor: "pointer",
         }}>✓ Resolve</button>
       </div>
     );
   }
   return (
-    <div style={{ display: "flex", alignItems: "center", justifyContent: "center" }}>
+    <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 8,
+      padding: "14px 10px", border: "2px dashed var(--border)", borderRadius: "calc(var(--radius) + 4px)",
+      background: "var(--muted)" }}>
+      <div style={{ fontSize: 11, fontWeight: 600, color: "var(--muted-foreground)", textTransform: "uppercase", letterSpacing: ".05em" }}>Missing Transaction</div>
       {loading ? (
         <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
           <div style={{ width: 14, height: 14, border: "2px solid var(--primary)", borderTopColor: "transparent", borderRadius: 99, animation: "spin .6s linear infinite" }} />
@@ -514,11 +520,9 @@ function NotInLedgerCenter({ statementItem, onCreated, onResolve, created }) {
         </div>
       ) : (
         <button onClick={handleCreate} style={{
-          padding: "6px 14px", background: "transparent",
-          color: "var(--primary)", border: "1px solid var(--primary)",
-          borderRadius: "var(--radius)", fontSize: 12, fontWeight: 600, cursor: "pointer",
-          display: "flex", alignItems: "center", gap: 5,
-        }}>+ Create Transaction</button>
+          padding: "5px 14px", background: C.grad, color: "#fff",
+          border: "none", borderRadius: "var(--radius)", fontSize: 11, fontWeight: 600, cursor: "pointer",
+        }}>+ Create</button>
       )}
     </div>
   );
@@ -1056,6 +1060,12 @@ function Screen3({ go }) {
   const [createdLedger, setCreatedLedger] = useState({});
   // Track picked candidate for duplicate items (future extensibility)
   const [pickedCandidate, setPickedCandidate] = useState({});
+  // TASK-03: track which candidates user wants to KEEP per duplicate item
+  // shape: { [itemId]: Set of candidate indices to keep }
+  const [keptCandidates, setKeptCandidates] = useState({});
+  // TASK-06: independent search per column
+  const [searchL, setSearchL] = useState("");
+  const [searchR, setSearchR] = useState("");
 
   function flash(m) { setToast(m); setTimeout(() => setToast(null), 2200); }
 
@@ -1069,7 +1079,7 @@ function Screen3({ go }) {
   // Change 3: Accept — immediately moves to Resolved
   function acceptItem(item) {
     setAttention(p => p.filter(a => a.id !== item.id));
-    setResolved(p => [{ id: item.id, L: item.L, R: item.R, how: "AI accepted" }, ...p]);
+    setResolved(p => [{ id: item.id, L: item.L, R: item.R, how: "AI Accepted" }, ...p]);
     setResolvedOpen(true);
     flash("Resolved: " + (item.L?.n || item.R?.n || "item"));
   }
@@ -1089,7 +1099,7 @@ function Screen3({ go }) {
   // Change 3: Resolve after Update — moves to Resolved
   function resolveUpdated(item) {
     setAttention(p => p.filter(a => a.id !== item.id));
-    setResolved(p => [{ id: item.id, L: item.L, R: item.R, how: "AI updated" }, ...p]);
+    setResolved(p => [{ id: item.id, L: item.L, R: item.R, how: "AI Updated" }, ...p]);
     setResolvedOpen(true);
     flash("Resolved: " + (item.L?.n || item.R?.n || "item"));
   }
@@ -1169,6 +1179,35 @@ function Screen3({ go }) {
     flash("Dismissed: " + (item.R?.n || "item"));
   }
 
+  // TASK-03: Resolve duplicates — keep checked ones, delete unchecked
+  function resolveDuplicates(item) {
+    const kept = keptCandidates[item.id] || new Set();
+    const candidates = item.candidates || [item.L];
+    const toKeep = candidates.filter((_, i) => kept.has(i));
+    const chosenL = toKeep[0] || candidates[0];
+    setAttention(p => p.filter(a => a.id !== item.id));
+    setResolved(p => [{ id: item.id, L: chosenL, R: item.R, how: "Duplicate resolved" }, ...p]);
+    setResolvedOpen(true);
+    setKeptCandidates(p => { const next = { ...p }; delete next[item.id]; return next; });
+    flash("Duplicate resolved: kept " + toKeep.length + " of " + candidates.length);
+  }
+
+  // TASK-03: Ignore duplication — keep all, dismiss suggestion
+  function ignoreDuplication(item) {
+    setAttention(p => p.filter(a => a.id !== item.id));
+    setKeptCandidates(p => { const next = { ...p }; delete next[item.id]; return next; });
+    flash("Duplication ignored — all transactions kept");
+  }
+
+  // TASK-03: toggle kept state for a candidate
+  function toggleKept(itemId, idx) {
+    setKeptCandidates(p => {
+      const cur = new Set(p[itemId] || []);
+      cur.has(idx) ? cur.delete(idx) : cur.add(idx);
+      return { ...p, [itemId]: cur };
+    });
+  }
+
   const bannerItems = [
     ...attention.filter(a => a.L).map(a => ({ id: a.id, item: a.L })),
     ...attention.filter(a => a.R).map(a => ({ id: a.id, item: a.R })),
@@ -1195,64 +1234,111 @@ function Screen3({ go }) {
         <div>
           <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 6 }}>
             <h1 style={{ fontSize: 20, fontWeight: 700, color: "var(--foreground)", margin: 0 }}>HSBC Current Account</h1>
-            <Badge v="warning">In Progress</Badge>
           </div>
           <div style={{ fontSize: 13, color: "var(--muted-foreground)" }}>1 Apr – 30 Jun 2025 · hsbc_q2_2025.csv</div>
         </div>
         <div style={{ display: "flex", gap: 8 }}>
-          <Btn outline sm>⬒ Report</Btn>
-          <Btn grad onClick={canDone ? go : undefined} disabled={!canDone}>🛡 Review & Approve</Btn>
+          <Btn grad onClick={canDone ? go : undefined} disabled={!canDone}>Reconcile</Btn>
         </div>
       </div>
 
-      {/* Change 2: Balance header with editable Statement Balance */}
+      {/* TASK-01: Balance header — editable dates, no Matched column */}
       <div style={{ display: "flex", gap: 2, padding: "10px 0", marginBottom: 4 }}>
-        {/* Start Date */}
-        <div style={{ flex: 1, padding: "8px 14px", background: "var(--card)", borderRadius: "var(--radius)", border: "1px solid var(--border)" }}>
+        {/* Start Date — editable */}
+        <div style={{ flex: 1, padding: "8px 14px", background: "var(--card)", borderRadius: "var(--radius)", border: "1px solid var(--primary)" }}>
           <div style={{ fontSize: 10, fontWeight: 600, color: "var(--muted-foreground)", textTransform: "uppercase", letterSpacing: ".06em", marginBottom: 2 }}>Start Date</div>
-          <div style={{ fontSize: 14, fontWeight: 600, color: "var(--foreground)" }}>1 Apr 2025</div>
+          <input type="date" defaultValue="2025-04-01"
+            style={{ fontSize: 13, fontWeight: 600, color: "var(--foreground)", border: "none", outline: "none", background: "transparent", width: "100%", cursor: "pointer" }} />
         </div>
-        {/* End Date */}
-        <div style={{ flex: 1, padding: "8px 14px", background: "var(--card)", borderRadius: "var(--radius)", border: "1px solid var(--border)" }}>
+        {/* End Date — editable */}
+        <div style={{ flex: 1, padding: "8px 14px", background: "var(--card)", borderRadius: "var(--radius)", border: "1px solid var(--primary)" }}>
           <div style={{ fontSize: 10, fontWeight: 600, color: "var(--muted-foreground)", textTransform: "uppercase", letterSpacing: ".06em", marginBottom: 2 }}>End Date</div>
-          <div style={{ fontSize: 14, fontWeight: 600, color: "var(--foreground)" }}>30 Jun 2025</div>
+          <input type="date" defaultValue="2025-06-30"
+            style={{ fontSize: 13, fontWeight: 600, color: "var(--foreground)", border: "none", outline: "none", background: "transparent", width: "100%", cursor: "pointer" }} />
+        </div>
+        {/* Beginning Balance — editable */}
+        <div style={{ flex: 1, padding: "8px 14px", background: "var(--card)", borderRadius: "var(--radius)", border: "1px solid var(--primary)" }}>
+          <div style={{ fontSize: 10, fontWeight: 600, color: "var(--primary)", textTransform: "uppercase", letterSpacing: ".06em", marginBottom: 2 }}>Beginning Balance</div>
+          <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
+            <span style={{ fontSize: 14, fontWeight: 600, color: "var(--foreground)" }}>£</span>
+            <input value="130,347.28" readOnly
+              style={{ fontSize: 14, fontWeight: 600, color: "var(--foreground)", border: "none", outline: "none", background: "transparent", width: "100%", fontVariantNumeric: "tabular-nums" }} />
+          </div>
         </div>
         {/* Statement Balance — editable */}
         <div style={{ flex: 1, padding: "8px 14px", background: "var(--card)", borderRadius: "var(--radius)", border: "1px solid var(--primary)" }}>
           <div style={{ fontSize: 10, fontWeight: 600, color: "var(--primary)", textTransform: "uppercase", letterSpacing: ".06em", marginBottom: 2 }}>Statement Balance</div>
           <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
             <span style={{ fontSize: 14, fontWeight: 600, color: "var(--foreground)" }}>£</span>
-            <input
-              value={stmtBal}
-              onChange={e => setStmtBal(e.target.value)}
-              style={{ fontSize: 14, fontWeight: 600, color: "var(--foreground)", border: "none", outline: "none", background: "transparent", width: "100%", fontVariantNumeric: "tabular-nums" }}
-            />
+            <input value={stmtBal} onChange={e => setStmtBal(e.target.value)}
+              style={{ fontSize: 14, fontWeight: 600, color: "var(--foreground)", border: "none", outline: "none", background: "transparent", width: "100%", fontVariantNumeric: "tabular-nums" }} />
           </div>
         </div>
-        {/* Beginning Balance — read-only */}
-        <div style={{ flex: 1, padding: "8px 14px", background: "var(--muted)", borderRadius: "var(--radius)", border: "1px solid var(--border)" }}>
-          <div style={{ fontSize: 10, fontWeight: 600, color: "var(--muted-foreground)", textTransform: "uppercase", letterSpacing: ".06em", marginBottom: 2 }}>Beginning Balance</div>
-          <div style={{ fontSize: 14, fontWeight: 600, color: "var(--foreground)" }}>£130,347.28</div>
-        </div>
-        {/* Matched */}
-        <div style={{ flex: 1, padding: "8px 14px", background: "var(--card)", borderRadius: "var(--radius)", border: "1px solid var(--border)" }}>
-          <div style={{ fontSize: 10, fontWeight: 600, color: "var(--muted-foreground)", textTransform: "uppercase", letterSpacing: ".06em", marginBottom: 2 }}>Matched</div>
-          <div style={{ fontSize: 14, fontWeight: 700, color: "var(--positive)" }}>{matched.length + resolved.length} of 33</div>
-        </div>
-        {/* Difference */}
-        <div style={{ flex: 1, padding: "8px 14px", background: diffZero ? "rgba(0,232,157,.04)" : "rgba(255,39,95,.03)", borderRadius: "var(--radius)", border: `1px solid ${diffZero ? "rgba(0,232,157,.2)" : "rgba(255,39,95,.15)"}` }}>
-          <div style={{ fontSize: 10, fontWeight: 600, color: "var(--muted-foreground)", textTransform: "uppercase", letterSpacing: ".06em", marginBottom: 2 }}>Difference</div>
-          <div style={{ fontSize: 14, fontWeight: 700, color: diffZero ? "var(--positive)" : "var(--destructive)" }}>
-            {diffZero ? "£0.00" : (diff < 0 ? "−" : "+") + "£" + Math.abs(diff).toLocaleString("en-GB", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+        {/* Difference — shown only when both balances present */}
+        {stmtBal && (
+          <div style={{ flex: 1, padding: "8px 14px", background: diffZero ? "rgba(0,232,157,.04)" : "rgba(255,39,95,.03)", borderRadius: "var(--radius)", border: `1px solid ${diffZero ? "rgba(0,232,157,.2)" : "rgba(255,39,95,.15)"}` }}>
+            <div style={{ fontSize: 10, fontWeight: 600, color: "var(--muted-foreground)", textTransform: "uppercase", letterSpacing: ".06em", marginBottom: 2 }}>Difference</div>
+            <div style={{ fontSize: 14, fontWeight: 700, color: diffZero ? "var(--positive)" : "var(--destructive)" }}>
+              {diffZero ? "£0.00" : (diff < 0 ? "−" : "+") + "£" + Math.abs(diff).toLocaleString("en-GB", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+            </div>
           </div>
-        </div>
+        )}
       </div>
 
-      {/* Column labels */}
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 180px 1fr", gap: 8, padding: "10px 18px 4px", borderTop: "1px solid var(--border)", marginTop: 4 }}>
-        <div style={{ fontSize: 11, fontWeight: 600, color: "var(--primary)", textTransform: "uppercase", letterSpacing: ".05em" }}>Fiskl Ledger</div>
-        <div style={{ fontSize: 11, fontWeight: 600, color: "var(--muted-foreground)", textTransform: "uppercase", textAlign: "center" }}>Confidence</div>
-        <div style={{ fontSize: 11, fontWeight: 600, color: "var(--muted-foreground)", textTransform: "uppercase", textAlign: "right", letterSpacing: ".05em" }}>Bank Statement</div>
+      {/* Column labels + TASK-06 search/add controls */}
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 180px 1fr", gap: 8, padding: "10px 18px 8px", borderTop: "1px solid var(--border)", marginTop: 4 }}>
+        {/* Left: label + search + add/expense buttons */}
+        <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+          <div style={{ fontSize: 11, fontWeight: 600, color: "var(--primary)", textTransform: "uppercase", letterSpacing: ".05em" }}>Fiskl Ledger</div>
+          <div style={{ display: "flex", gap: 4, alignItems: "center" }}>
+            <input
+              value={searchL}
+              onChange={e => setSearchL(e.target.value)}
+              placeholder="Search ledger…"
+              style={{
+                flex: 1, padding: "5px 9px", fontSize: 12,
+                border: "1px solid var(--border)", borderRadius: "var(--radius)",
+                background: "var(--background)", color: "var(--foreground)",
+                outline: "none",
+              }}
+            />
+            <Tooltip content="Add income transaction" side="top">
+              <button onClick={() => flash("+ Income transaction added")} style={{
+                width: 28, height: 28, borderRadius: "var(--radius)",
+                background: "var(--primary)", color: "#fff",
+                border: "none", fontSize: 16, fontWeight: 700,
+                cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", lineHeight: 1,
+              }}>+</button>
+            </Tooltip>
+            <Tooltip content="Add expense transaction" side="top">
+              <button onClick={() => flash("− Expense transaction added")} style={{
+                width: 28, height: 28, borderRadius: "var(--radius)",
+                background: "var(--primary)", color: "#fff",
+                border: "none", fontSize: 18, fontWeight: 700,
+                cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", lineHeight: 1,
+              }}>−</button>
+            </Tooltip>
+          </div>
+        </div>
+        {/* Center: confidence label */}
+        <div style={{ display: "flex", alignItems: "flex-end", justifyContent: "center", paddingBottom: 2 }}>
+          <div style={{ fontSize: 11, fontWeight: 600, color: "var(--muted-foreground)", textTransform: "uppercase", textAlign: "center" }}>Confidence</div>
+        </div>
+        {/* Right: label + search */}
+        <div style={{ display: "flex", flexDirection: "column", gap: 6, alignItems: "flex-end" }}>
+          <div style={{ fontSize: 11, fontWeight: 600, color: "var(--muted-foreground)", textTransform: "uppercase", letterSpacing: ".05em" }}>Bank Statement</div>
+          <input
+            value={searchR}
+            onChange={e => setSearchR(e.target.value)}
+            placeholder="Search statement…"
+            style={{
+              width: "100%", padding: "5px 9px", fontSize: 12,
+              border: "1px solid var(--border)", borderRadius: "var(--radius)",
+              background: "var(--background)", color: "var(--foreground)",
+              outline: "none",
+            }}
+          />
+        </div>
       </div>
 
       {/* Needs Attention */}
@@ -1271,48 +1357,45 @@ function Screen3({ go }) {
                       {item.type === "Duplicate" && item.candidates?.length
                         ? (
                           <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
-                            {item.candidates.map((c, i) => (
-                              <div key={i}>
-                                {i > 0 && <div style={{ fontSize: 10, fontWeight: 600, color: "var(--muted-foreground)", textAlign: "center", textTransform: "uppercase", letterSpacing: ".05em", padding: "2px 0" }}>vs</div>}
-                                <Crd style={{ padding: "10px 12px" }}>
-                                  <div style={{ display: "flex", alignItems: "flex-start", gap: 8 }}>
-                                    <div style={{ flex: 1, minWidth: 0 }}>
-                                      <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 2 }}>
-                                        <span style={{ fontSize: 11, color: "var(--muted-foreground)" }}>{c.d}</span>
-                                        <Amt a={c.a} sm />
+                            {item.candidates.map((c, i) => {
+                              const isKept = (keptCandidates[item.id] || new Set()).has(i);
+                              return (
+                                <div key={i}>
+                                  {i > 0 && <div style={{ fontSize: 10, fontWeight: 600, color: "var(--muted-foreground)", textAlign: "center", textTransform: "uppercase", letterSpacing: ".05em", padding: "2px 0" }}>vs</div>}
+                                  <Crd style={{ padding: "10px 12px", borderColor: isKept ? "var(--positive)" : "var(--border)", background: isKept ? "rgba(0,232,157,.03)" : "var(--card)", cursor: "pointer" }}
+                                    onClick={() => toggleKept(item.id, i)}>
+                                    <div style={{ display: "flex", alignItems: "flex-start", gap: 8 }}>
+                                      <input type="checkbox" checked={isKept} onChange={() => toggleKept(item.id, i)}
+                                        style={{ marginTop: 2, accentColor: "var(--positive)", cursor: "pointer", flexShrink: 0 }} />
+                                      <div style={{ flex: 1, minWidth: 0 }}>
+                                        <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 2 }}>
+                                          <span style={{ fontSize: 11, color: "var(--muted-foreground)" }}>{c.d}</span>
+                                          <Amt a={c.a} sm />
+                                        </div>
+                                        <div style={{ fontSize: 13, fontWeight: 600, color: "var(--foreground)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{c.n}</div>
+                                        {c.cat && <div style={{ fontSize: 11, color: "var(--muted-foreground)", marginTop: 1 }}>{c.cat}</div>}
                                       </div>
-                                      <div style={{ fontSize: 13, fontWeight: 600, color: "var(--foreground)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{c.n}</div>
-                                      {c.cat && <div style={{ fontSize: 11, color: "var(--muted-foreground)", marginTop: 1 }}>{c.cat}</div>}
                                     </div>
-                                    <button onClick={e => { e.stopPropagation(); pickCandidate(item, i); }} style={{
-                                      flexShrink: 0, padding: "4px 8px",
-                                      background: "var(--positive)", color: "#fff",
-                                      border: "none", borderRadius: "var(--radius)",
-                                      fontSize: 11, fontWeight: 600, cursor: "pointer", whiteSpace: "nowrap",
-                                    }}>✓ Use</button>
-                                  </div>
-                                </Crd>
-                              </div>
-                            ))}
+                                  </Crd>
+                                </div>
+                              );
+                            })}
                           </div>
                         )
                         : item.L
                           ? <LedgerItem item={item.L} checked={selL.includes(item.id)} onCheck={() => toggleSelL(item.id)} onEdit={() => setEditTarget(item)} />
-                          : <div /> /* Change 4: empty left side */
+                          : <div />
                       }
-
                       {/* Center column */}
                       {isNotInLedger || wasCreated
-                        ? /* Change 4: Not in ledger center */
-                          <NotInLedgerCenter
+                        ? <NotInLedgerCenter
                             statementItem={item.R}
                             created={wasCreated}
                             onCreated={stmtItem => handleCreateLedger(item.id, stmtItem)}
                             onResolve={() => handleResolveCreated(item.id)}
                           />
                         : item.aiSuggested
-                          ? /* Change 3: two-action ConfBox */
-                            <ConfBox item={item} onAccept={item.type === "Duplicate" ? pickCandidate : acceptItem} onUpdate={updateItem} onResolveUpdated={resolveUpdated} onDismissBoth={dismissBoth} />
+                          ? <ConfBox item={item} onAccept={item.type === "Duplicate" ? resolveDuplicates : acceptItem} onUpdate={updateItem} onResolveUpdated={resolveUpdated} onDismissBoth={ignoreDuplication} />
                           : (
                             <div style={{ display: "flex", alignItems: "center", justifyContent: "center" }}>
                               <div style={{ padding: "8px 10px", borderRadius: "calc(var(--radius) + 4px)", border: "1px dashed var(--border)", background: "var(--muted)", textAlign: "center" }}>
@@ -1322,7 +1405,6 @@ function Screen3({ go }) {
                             </div>
                           )
                       }
-
                       <StatementItem item={item.R} checked={selR.includes(item.id)} onCheck={() => toggleSelR(item.id)} />
                     </div>
                   );
@@ -1337,6 +1419,51 @@ function Screen3({ go }) {
         <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: 8 }}>
           <Btn grad sm onClick={resolveSelected}>✓ Resolve Selected ({selL.length + selR.length})</Btn>
         </div>
+      )}
+
+      {/* Resolved — above Auto Matched per TASK-05 */}
+      {resolved.length > 0 && (
+        <Crd style={{ marginBottom: 12, overflow: "hidden", borderColor: "rgba(0,120,255,.12)" }}>
+          <SecHdr icon="✓" color="var(--primary)" title="Resolved" itemCount={resolved.length} totalAmt={resolvedTotal} open={resolvedOpen} onToggle={() => setResolvedOpen(!resolvedOpen)} />
+          {resolvedOpen && (
+            <div style={{ padding: "0 14px 14px", display: "flex", flexDirection: "column", gap: 6 }}>
+              {resolved.map((r, i) => {
+                // TASK-05: per-how badge styles
+                const howLower = (r.how || "").toLowerCase();
+                let badgeStyle;
+                if (howLower === "ai accepted") {
+                  badgeStyle = { color: "#00AD68", background: "rgba(0,232,157,0.12)" };
+                } else if (howLower === "ai updated" || howLower === "duplicate resolved") {
+                  badgeStyle = { color: "#0078FF", background: "rgba(0,120,255,0.08)" };
+                } else if (howLower === "manual") {
+                  badgeStyle = { color: "#5F6C85", background: "#EDF1F7" };
+                } else if (howLower === "created") {
+                  badgeStyle = { color: "#0078FF", background: "rgba(0,120,255,0.08)" };
+                } else {
+                  // fallback for "Dismissed (both)" etc.
+                  badgeStyle = { color: "#5F6C85", background: "#EDF1F7" };
+                }
+                return (
+                  <div key={r.id || i} style={{ display: "grid", gridTemplateColumns: "1fr 180px 1fr", gap: 8, opacity: .65 }}>
+                    <Crd style={{ padding: "8px 10px" }}>
+                      {r.L ? <><div style={{ fontSize: 11, color: "var(--muted-foreground)" }}>{r.L.d}</div><div style={{ fontSize: 12, fontWeight: 500, color: "var(--foreground)" }}>{r.L.n}</div><Amt a={r.L.a} sm /></> : <span style={{ fontSize: 12, color: "var(--muted-foreground)" }}>—</span>}
+                    </Crd>
+                    <div style={{ display: "flex", alignItems: "center", justifyContent: "center" }}>
+                      <span style={{
+                        fontSize: 10, fontWeight: 600, padding: "3px 8px",
+                        borderRadius: 99, whiteSpace: "nowrap",
+                        ...badgeStyle,
+                      }}>{r.how}</span>
+                    </div>
+                    <Crd style={{ padding: "8px 10px" }}>
+                      {r.R ? <><div style={{ fontSize: 11, color: "var(--muted-foreground)" }}>{r.R.d}</div><div style={{ fontSize: 12, fontWeight: 500, color: "var(--foreground)" }}>{r.R.n}</div><Amt a={r.R.a} sm /></> : <span style={{ fontSize: 12, color: "var(--muted-foreground)" }}>—</span>}
+                    </Crd>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </Crd>
       )}
 
       {/* Auto Matched */}
@@ -1375,30 +1502,6 @@ function Screen3({ go }) {
           </div>
         )}
       </Crd>
-
-      {/* Resolved */}
-      {resolved.length > 0 && (
-        <Crd style={{ marginBottom: 12, overflow: "hidden", borderColor: "rgba(0,120,255,.12)" }}>
-          <SecHdr icon="✓" color="var(--primary)" title="Resolved" itemCount={resolved.length} totalAmt={resolvedTotal} open={resolvedOpen} onToggle={() => setResolvedOpen(!resolvedOpen)} />
-          {resolvedOpen && (
-            <div style={{ padding: "0 14px 14px", display: "flex", flexDirection: "column", gap: 6 }}>
-              {resolved.map((r, i) => (
-                <div key={r.id || i} style={{ display: "grid", gridTemplateColumns: "1fr 180px 1fr", gap: 8, opacity: .65 }}>
-                  <Crd style={{ padding: "8px 10px" }}>
-                    {r.L ? <><div style={{ fontSize: 11, color: "var(--muted-foreground)" }}>{r.L.d}</div><div style={{ fontSize: 12, fontWeight: 500, color: "var(--foreground)" }}>{r.L.n}</div><Amt a={r.L.a} sm /></> : <span style={{ fontSize: 12, color: "var(--muted-foreground)" }}>—</span>}
-                  </Crd>
-                  <div style={{ display: "flex", alignItems: "center", justifyContent: "center" }}>
-                    <Badge v="positive" xs>{r.how}</Badge>
-                  </div>
-                  <Crd style={{ padding: "8px 10px" }}>
-                    {r.R ? <><div style={{ fontSize: 11, color: "var(--muted-foreground)" }}>{r.R.d}</div><div style={{ fontSize: 12, fontWeight: 500, color: "var(--foreground)" }}>{r.R.n}</div><Amt a={r.R.a} sm /></> : <span style={{ fontSize: 12, color: "var(--muted-foreground)" }}>—</span>}
-                  </Crd>
-                </div>
-              ))}
-            </div>
-          )}
-        </Crd>
-      )}
 
       {/* Multi-select floating banner (manual resolve) */}
       <BalanceBanner selL={selL} selR={selR} allItems={bannerItems} onResolve={resolveSelected} />
