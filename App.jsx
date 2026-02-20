@@ -1115,6 +1115,56 @@ function Screen2({ go }) {
   );
 }
 
+// Statement Balance tile — read-only by default, pencil icon activates edit mode
+function StmtBalanceField({ value, onChange }) {
+  const [editing, setEditing] = useState(false);
+  const inputRef = useRef(null);
+  function startEdit() { setEditing(true); setTimeout(() => inputRef.current?.select(), 0); }
+  function commitEdit() { setEditing(false); }
+  return (
+    <div style={{ flex: 1, padding: "8px 14px", background: "var(--card)", borderRadius: "var(--radius)", border: "1px solid var(--border)", boxShadow: "0 1px 3px rgba(0,0,0,.06)" }}>
+      <div style={{ fontSize: 10, fontWeight: 600, color: "var(--muted-foreground)", textTransform: "uppercase", letterSpacing: ".06em", marginBottom: 4 }}>Statement Balance</div>
+      <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
+        {editing ? (
+          <>
+            <span style={{ fontSize: 14, fontWeight: 600, color: "var(--foreground)" }}>£</span>
+            <input
+              ref={inputRef}
+              value={value}
+              onChange={e => onChange(e.target.value)}
+              onBlur={commitEdit}
+              onKeyDown={e => { if (e.key === "Enter" || e.key === "Escape") commitEdit(); }}
+              style={{
+                flex: 1, fontSize: 14, fontWeight: 600, color: "var(--foreground)",
+                border: "none", outline: "none", background: "transparent",
+                fontVariantNumeric: "tabular-nums", minWidth: 0,
+              }}
+            />
+            <button onClick={commitEdit} style={{ flexShrink: 0, padding: 3, background: "transparent", border: "none", cursor: "pointer", color: "var(--positive)", display: "flex" }}>
+              <Check size={13} />
+            </button>
+          </>
+        ) : (
+          <>
+            <span style={{ flex: 1, fontSize: 14, fontWeight: 600, color: "var(--foreground)", fontVariantNumeric: "tabular-nums" }}>£{value}</span>
+            <button onClick={startEdit} style={{
+              flexShrink: 0, padding: 4, background: "transparent",
+              border: "1px solid var(--border)", borderRadius: "var(--radius)",
+              cursor: "pointer", color: "var(--muted-foreground)", display: "flex",
+              transition: "background .15s, color .15s",
+            }}
+              onMouseEnter={e => { e.currentTarget.style.background = "var(--accent)"; e.currentTarget.style.color = "var(--foreground)"; }}
+              onMouseLeave={e => { e.currentTarget.style.background = "transparent"; e.currentTarget.style.color = "var(--muted-foreground)"; }}
+            >
+              <Pencil size={11} />
+            </button>
+          </>
+        )}
+      </div>
+    </div>
+  );
+}
+
 function Screen3({ go }) {
   const [attention, setAttention] = useState(INIT_ATTENTION);
   const [matched, setMatched] = useState(INIT_MATCHED);
@@ -1314,43 +1364,36 @@ function Screen3({ go }) {
         </div>
       </div>
 
-      {/* TASK-01: Balance header — editable dates, no Matched column */}
+      {/* Balance header */}
       <div style={{ display: "flex", gap: 2, padding: "10px 0", marginBottom: 4 }}>
-        {/* Start Date — editable */}
-        <div style={{ flex: 1, padding: "8px 14px", background: "var(--card)", borderRadius: "var(--radius)", border: "1px solid var(--primary)" }}>
-          <div style={{ fontSize: 10, fontWeight: 600, color: "var(--muted-foreground)", textTransform: "uppercase", letterSpacing: ".06em", marginBottom: 2 }}>Start Date</div>
-          <input type="date" defaultValue="2025-04-01"
-            style={{ fontSize: 13, fontWeight: 600, color: "var(--foreground)", border: "none", outline: "none", background: "transparent", width: "100%", cursor: "pointer" }} />
-        </div>
-        {/* End Date — editable */}
-        <div style={{ flex: 1, padding: "8px 14px", background: "var(--card)", borderRadius: "var(--radius)", border: "1px solid var(--primary)" }}>
-          <div style={{ fontSize: 10, fontWeight: 600, color: "var(--muted-foreground)", textTransform: "uppercase", letterSpacing: ".06em", marginBottom: 2 }}>End Date</div>
-          <input type="date" defaultValue="2025-06-30"
-            style={{ fontSize: 13, fontWeight: 600, color: "var(--foreground)", border: "none", outline: "none", background: "transparent", width: "100%", cursor: "pointer" }} />
-        </div>
-        {/* Beginning Balance — editable */}
-        <div style={{ flex: 1, padding: "8px 14px", background: "var(--card)", borderRadius: "var(--radius)", border: "1px solid var(--primary)" }}>
-          <div style={{ fontSize: 10, fontWeight: 600, color: "var(--primary)", textTransform: "uppercase", letterSpacing: ".06em", marginBottom: 2 }}>Beginning Balance</div>
-          <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
-            <span style={{ fontSize: 14, fontWeight: 600, color: "var(--foreground)" }}>£</span>
-            <input value="130,347.28" readOnly
-              style={{ fontSize: 14, fontWeight: 600, color: "var(--foreground)", border: "none", outline: "none", background: "transparent", width: "100%", fontVariantNumeric: "tabular-nums" }} />
+
+        {/* Date range — single tile with two pickers */}
+        <div style={{ flex: 1.4, padding: "8px 14px", background: "var(--card)", borderRadius: "var(--radius)", border: "1px solid var(--border)", boxShadow: "0 1px 3px rgba(0,0,0,.06)" }}>
+          <div style={{ fontSize: 10, fontWeight: 600, color: "var(--muted-foreground)", textTransform: "uppercase", letterSpacing: ".06em", marginBottom: 4 }}>Period</div>
+          <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+            <input type="date" defaultValue="2025-04-01"
+              style={{ fontSize: 13, fontWeight: 500, color: "var(--foreground)", border: "none", outline: "none", background: "transparent", cursor: "pointer", minWidth: 0, flex: 1 }} />
+            <span style={{ color: "var(--muted-foreground)", fontSize: 12, flexShrink: 0 }}>→</span>
+            <input type="date" defaultValue="2025-06-30"
+              style={{ fontSize: 13, fontWeight: 500, color: "var(--foreground)", border: "none", outline: "none", background: "transparent", cursor: "pointer", minWidth: 0, flex: 1 }} />
           </div>
         </div>
-        {/* Statement Balance — editable */}
-        <div style={{ flex: 1, padding: "8px 14px", background: "var(--card)", borderRadius: "var(--radius)", border: "1px solid var(--primary)" }}>
-          <div style={{ fontSize: 10, fontWeight: 600, color: "var(--primary)", textTransform: "uppercase", letterSpacing: ".06em", marginBottom: 2 }}>Statement Balance</div>
-          <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
-            <span style={{ fontSize: 14, fontWeight: 600, color: "var(--foreground)" }}>£</span>
-            <input value={stmtBal} onChange={e => setStmtBal(e.target.value)}
-              style={{ fontSize: 14, fontWeight: 600, color: "var(--foreground)", border: "none", outline: "none", background: "transparent", width: "100%", fontVariantNumeric: "tabular-nums" }} />
-          </div>
+
+        {/* Beginning Balance — read-only, from prev reconciliation */}
+        <div style={{ flex: 1, padding: "8px 14px", background: "var(--card)", borderRadius: "var(--radius)", border: "1px solid var(--border)", boxShadow: "0 1px 3px rgba(0,0,0,.06)" }}>
+          <div style={{ fontSize: 10, fontWeight: 600, color: "var(--muted-foreground)", textTransform: "uppercase", letterSpacing: ".06em", marginBottom: 4 }}>Beginning Balance</div>
+          <div style={{ fontSize: 14, fontWeight: 600, color: "var(--foreground)", fontVariantNumeric: "tabular-nums" }}>£130,347.28</div>
+          <div style={{ fontSize: 10, color: "var(--muted-foreground)", marginTop: 2 }}>From prev. reconciliation</div>
         </div>
-        {/* Difference — shown only when both balances present */}
+
+        {/* Statement Balance — read-only with pencil to enter edit mode */}
+        <StmtBalanceField value={stmtBal} onChange={setStmtBal} />
+
+        {/* Difference */}
         {stmtBal && (
-          <div style={{ flex: 1, padding: "8px 14px", background: diffZero ? "rgba(0,232,157,.04)" : "rgba(255,39,95,.03)", borderRadius: "var(--radius)", border: `1px solid ${diffZero ? "rgba(0,232,157,.2)" : "rgba(255,39,95,.15)"}` }}>
-            <div style={{ fontSize: 10, fontWeight: 600, color: "var(--muted-foreground)", textTransform: "uppercase", letterSpacing: ".06em", marginBottom: 2 }}>Difference</div>
-            <div style={{ fontSize: 14, fontWeight: 700, color: diffZero ? "var(--positive)" : "var(--destructive)" }}>
+          <div style={{ flex: 1, padding: "8px 14px", background: diffZero ? "rgba(0,232,157,.04)" : "rgba(255,39,95,.03)", borderRadius: "var(--radius)", border: `1px solid ${diffZero ? "rgba(0,232,157,.15)" : "rgba(255,39,95,.12)"}`, boxShadow: "0 1px 3px rgba(0,0,0,.04)" }}>
+            <div style={{ fontSize: 10, fontWeight: 600, color: "var(--muted-foreground)", textTransform: "uppercase", letterSpacing: ".06em", marginBottom: 4 }}>Difference</div>
+            <div style={{ fontSize: 14, fontWeight: 700, color: diffZero ? "var(--positive)" : "var(--destructive)", fontVariantNumeric: "tabular-nums" }}>
               {diffZero ? "£0.00" : (diff < 0 ? "−" : "+") + "£" + Math.abs(diff).toLocaleString("en-GB", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
             </div>
           </div>
