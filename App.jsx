@@ -3,7 +3,7 @@ import {
   Home, ShoppingBag, ShoppingCart, PieChart, Package, Wallet, Users, Settings,
   ChevronRight, ChevronDown, PanelLeft, ArrowLeft, MoreVertical, LogOut,
   Eye, EyeOff, Sun, CreditCard, Layers, Shield, KeyRound, HelpCircle, User, SlidersHorizontal,
-  Pencil, Check, X, Search, Plus, Minus,
+  Pencil, Check, X, Search, Plus, Minus, MoreHorizontal, Filter,
 } from "lucide-react";
 
 // ── Error Boundary ─────────────────────────────────────────────────────────
@@ -28,6 +28,11 @@ function fmtGbp(n, signed) {
   var abs = "£" + Math.abs(n).toLocaleString("en-GB", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
   if (!signed) return (n < 0 ? "−" : "") + abs;
   return (n >= 0 ? "+" : "−") + abs;
+}
+function fmtCurrency(n, currency) {
+  if (n == null) return "—";
+  const sym = { GBP: "£", EUR: "€", USD: "$" }[currency] || "";
+  return sym + Math.abs(n).toLocaleString("en-GB", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 }
 
 // ── Icons — lucide-react wrapper ────────────────────────────────────────────
@@ -658,6 +663,31 @@ const LEDGER = [
   { id:"l9", d:"24 Jun", n:"INSURANCE", a:-890, cat:"Insurance", st:"reconciled" },
 ];
 
+// ── ACCOUNTS DATA (Screen 0) ──────────────────────────────────────────────
+const ACCOUNTS = [
+  { id: "hsbc",     name: "HSBC Current Account",    currency: "GBP", balance: 142890.50,
+    months: ["reconciled","reconciled","reconciled","needs_attention","in_progress","draft",null,null,null,null,null,null] },
+  { id: "revolut",  name: "Revolut Business EUR",     currency: "EUR", balance: 89204.30,
+    months: ["reconciled","reconciled","reconciled","reconciled","in_progress",null,null,null,null,null,null,null] },
+  { id: "stripe",   name: "Stripe Payments",          currency: "USD", balance: 234567.00,
+    months: ["reconciled","reconciled","reconciled","needs_attention",null,null,null,null,null,null,null,null] },
+  { id: "jpmorgan", name: "JPMorgan Chase USD",        currency: "USD", balance: 1203400.00,
+    months: ["reconciled","reconciled","reconciled","reconciled","reconciled",null,null,null,null,null,null,null] },
+  { id: "mercury",  name: "Mercury Credit Card 1234",  currency: "USD", balance: null,
+    months: [null,null,null,null,null,null,null,null,null,null,null,null] },
+];
+
+const MONTH_LABELS = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+
+const HSBC_PERIODS = [
+  { period: "June 2025",     status: "draft",            balance: 142890.50 },
+  { period: "May 2025",      status: "needs_attention",  balance: 138540.20 },
+  { period: "April 2025",    status: "reconciled",       balance: 135210.80 },
+  { period: "March 2025",    status: "reconciled",       balance: 132450.00 },
+  { period: "February 2025", status: "reconciled",       balance: 129880.40 },
+  { period: "January 2025",  status: "reconciled",       balance: 125320.60 },
+];
+
 // ── NAV STRUCTURE ──────────────────────────────────────────────────────────
 const NAV_ITEMS = [
   { id:"dashboard", label:"Dashboard", icon:"home", url:"#" },
@@ -840,15 +870,27 @@ function Sidebar({ collapsed, onToggle }) {
 }
 
 // ── SITE HEADER ────────────────────────────────────────────────────────────
-function SiteHeader({ collapsed, onToggleCollapse, screen, onScreenChange }) {
+function SiteHeader({ collapsed, onToggleCollapse, screen, onScreenChange, selectedAccount }) {
   const [privacy, setPrivacy] = useState(false);
 
-  const breadcrumbs = [
-    { label: "Accounting", href: "#" },
-    { label: "Reconciliation" },
-  ];
-
-  const stepLabels = { 1: "Open", 2: "Upload", 3: "Reconcile", 4: "Report" };
+  // Dynamic breadcrumb
+  let breadcrumbParts;
+  if (screen === 0) {
+    breadcrumbParts = [
+      { label: "Accounting", muted: true },
+      { label: "Reconciliation", bold: true },
+    ];
+  } else if (screen === 0.5) {
+    breadcrumbParts = [
+      { label: "Reconciliation", muted: true },
+      { label: selectedAccount?.name || "Account", bold: true },
+    ];
+  } else {
+    breadcrumbParts = [
+      { label: selectedAccount?.name || "HSBC Current Account", muted: true },
+      { label: "June 2025", bold: true },
+    ];
+  }
 
   return (
     <header style={{
@@ -878,21 +920,16 @@ function SiteHeader({ collapsed, onToggleCollapse, screen, onScreenChange }) {
 
         {/* Breadcrumb */}
         <nav style={{ display: "flex", alignItems: "center", gap: 4, fontSize: 14, minWidth: 0 }}>
-          {/* Back arrow to parent */}
           <a href="#" style={{ display: "flex", alignItems: "center", gap: 6, color: "var(--muted-foreground)", textDecoration: "none", fontWeight: 500, padding: "4px 6px", borderRadius: "var(--radius)", flexShrink: 0 }}
             onMouseEnter={e => e.currentTarget.style.color = "var(--foreground)"}
             onMouseLeave={e => e.currentTarget.style.color = "var(--muted-foreground)"}
           >
             <ArrowLeft size={15} />
-            <span style={{ fontSize: 14 }}>{breadcrumbs[0].label}</span>
+            <span style={{ fontSize: 14 }}>{breadcrumbParts[0].label}</span>
           </a>
           <ChevronRight size={14} style={{ color: "var(--muted-foreground)", flexShrink: 0 }} />
           <span style={{ fontSize: 14, fontWeight: 600, color: "var(--foreground)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-            {breadcrumbs[1].label}
-          </span>
-          {/* Step indicator */}
-          <span style={{ fontSize: 12, color: "var(--muted-foreground)", marginLeft: 4, whiteSpace: "nowrap" }}>
-            · Step {screen}: {stepLabels[screen]}
+            {breadcrumbParts[1].label}
           </span>
         </nav>
       </div>
@@ -950,24 +987,27 @@ function SiteHeader({ collapsed, onToggleCollapse, screen, onScreenChange }) {
           </div>
         </div>
 
-        <Separator vertical />
-
-        {/* Tabs — shadcn-style pill */}
-        <div style={{ display: "flex", gap: 1, background: "var(--muted)", borderRadius: "var(--radius)", padding: "3px" }}>
-          {[1,2,3,4].map(n => (
-            <button key={n} onClick={() => onScreenChange(n)} style={{
-              padding: "4px 10px",
-              background: screen === n ? "var(--background)" : "transparent",
-              border: "none", borderRadius: "calc(var(--radius) - 2px)",
-              fontSize: 12, fontWeight: screen === n ? 600 : 400,
-              color: screen === n ? "var(--foreground)" : "var(--muted-foreground)",
-              cursor: "pointer", transition: "background .15s, color .15s",
-              boxShadow: screen === n ? "0 1px 3px rgba(0,0,0,.08)" : "none",
-            }}>
-              {n}. {["Open","Upload","Reconcile","Report"][n-1]}
-            </button>
-          ))}
-        </div>
+        {/* Tabs — only show on screens 1–4 */}
+        {screen >= 1 && (
+          <>
+            <Separator vertical />
+            <div style={{ display: "flex", gap: 1, background: "var(--muted)", borderRadius: "var(--radius)", padding: "3px" }}>
+              {[1,2,3,4].map(n => (
+                <button key={n} onClick={() => onScreenChange(n)} style={{
+                  padding: "4px 10px",
+                  background: screen === n ? "var(--background)" : "transparent",
+                  border: "none", borderRadius: "calc(var(--radius) - 2px)",
+                  fontSize: 12, fontWeight: screen === n ? 600 : 400,
+                  color: screen === n ? "var(--foreground)" : "var(--muted-foreground)",
+                  cursor: "pointer", transition: "background .15s, color .15s",
+                  boxShadow: screen === n ? "0 1px 3px rgba(0,0,0,.08)" : "none",
+                }}>
+                  {n}. {["Open","Upload","Reconcile","Report"][n-1]}
+                </button>
+              ))}
+            </div>
+          </>
+        )}
       </div>
     </header>
   );
@@ -999,6 +1039,275 @@ function YearSelector({ year, onChange }) {
 }
 
 // ── SCREENS ────────────────────────────────────────────────────────────────
+
+// Screen 0 — All accounts list with monthly timeline
+function Screen0({ go }) {
+  const [search, setSearch] = useState("");
+
+  // Dot component
+  function Dot({ status }) {
+    const filled = status != null;
+    let color;
+    if (status === "reconciled") color = "var(--positive)";
+    else if (status === "needs_attention") color = "var(--destructive)";
+    else if (status === "in_progress" || status === "draft") color = "var(--primary)";
+    else color = "transparent";
+
+    return (
+      <div style={{
+        width: 10, height: 10, borderRadius: 99, flexShrink: 0,
+        background: filled ? color : "transparent",
+        border: `1.5px solid ${filled ? color : "var(--border)"}`,
+      }} />
+    );
+  }
+
+  // Pick best badge status from months array
+  function accountBadge(acct) {
+    const active = acct.months.find(m => m === "needs_attention" || m === "in_progress" || m === "draft");
+    if (!active) {
+      const hasReconciled = acct.months.some(m => m === "reconciled");
+      return hasReconciled ? "reconciled" : null;
+    }
+    return active;
+  }
+
+  function BadgeForStatus({ status }) {
+    if (!status) return null;
+    if (status === "needs_attention") return <Badge v="critical">Needs attention</Badge>;
+    if (status === "draft")           return <Badge v="neutral">Draft</Badge>;
+    if (status === "in_progress")     return <Badge v="neutral">In progress</Badge>;
+    if (status === "reconciled")      return <Badge v="positive">Reconciled</Badge>;
+    return null;
+  }
+
+  const filtered = ACCOUNTS.filter(a => a.name.toLowerCase().includes(search.toLowerCase()));
+
+  return (
+    <div>
+      {/* Page title */}
+      <div style={{ marginBottom: 20 }}>
+        <h1 style={{ fontSize: 20, fontWeight: 700, color: "var(--foreground)", margin: "0 0 4px" }}>Reconciliation</h1>
+        <div style={{ fontSize: 13, color: "var(--muted-foreground)" }}>Manage and reconcile all connected bank accounts</div>
+      </div>
+
+      {/* Toolbar */}
+      <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 16 }}>
+        {/* Filter chip */}
+        <div style={{
+          display: "inline-flex", alignItems: "center", gap: 5, padding: "5px 10px",
+          background: "var(--accent)", border: "1px solid var(--border)",
+          borderRadius: 999, fontSize: 12, fontWeight: 500, color: "var(--foreground)",
+          cursor: "pointer", flexShrink: 0,
+        }}>
+          <span>Assets: Cash &amp; Cash Equivalents</span>
+          <ChevronDown size={12} style={{ color: "var(--muted-foreground)" }} />
+        </div>
+
+        <div style={{ flex: 1 }} />
+
+        {/* Search */}
+        <div style={{ position: "relative", display: "flex", alignItems: "center" }}>
+          <Search size={13} style={{ position: "absolute", left: 9, color: "var(--muted-foreground)", pointerEvents: "none" }} />
+          <input
+            value={search}
+            onChange={e => setSearch(e.target.value)}
+            placeholder="Search accounts…"
+            style={{
+              padding: "6px 10px 6px 28px", width: 220, fontSize: 13,
+              border: "1px solid var(--border)", borderRadius: "var(--radius)",
+              background: "var(--background)", color: "var(--foreground)",
+              outline: "none", transition: "border-color .15s",
+            }}
+            onFocus={e => e.target.style.borderColor = "var(--primary)"}
+            onBlur={e => e.target.style.borderColor = "var(--border)"}
+          />
+        </div>
+
+        {/* Filter icon button */}
+        <button style={{
+          padding: 7, background: "transparent", border: "1px solid var(--border)",
+          borderRadius: "var(--radius)", cursor: "pointer", color: "var(--muted-foreground)",
+          display: "flex", alignItems: "center", transition: "background .15s",
+        }}
+          onMouseEnter={e => e.currentTarget.style.background = "var(--accent)"}
+          onMouseLeave={e => e.currentTarget.style.background = "transparent"}
+        ><Filter size={14} /></button>
+      </div>
+
+      {/* Accounts list */}
+      <Crd style={{ overflow: "hidden" }}>
+        {/* Month header row */}
+        <div style={{
+          display: "grid", gridTemplateColumns: "1fr 320px 200px",
+          padding: "8px 18px", borderBottom: "1px solid var(--border)",
+          background: "var(--muted)",
+        }}>
+          <div style={{ fontSize: 10, fontWeight: 600, color: "var(--muted-foreground)", textTransform: "uppercase", letterSpacing: ".04em" }}>Account</div>
+          <div style={{ display: "flex", justifyContent: "space-between", paddingLeft: 8, paddingRight: 8 }}>
+            {MONTH_LABELS.map(m => (
+              <div key={m} style={{ fontSize: 9, fontWeight: 600, color: "var(--muted-foreground)", textTransform: "uppercase", width: 18, textAlign: "center" }}>{m}</div>
+            ))}
+          </div>
+          <div style={{ fontSize: 10, fontWeight: 600, color: "var(--muted-foreground)", textTransform: "uppercase", letterSpacing: ".04em", textAlign: "right" }}>Reconciled Balance</div>
+        </div>
+
+        {/* Account rows */}
+        {filtered.map((acct, idx) => {
+          const badgeStatus = accountBadge(acct);
+          return (
+            <div
+              key={acct.id}
+              onClick={() => go(acct)}
+              style={{
+                display: "grid", gridTemplateColumns: "1fr 320px 200px",
+                padding: "14px 18px", cursor: "pointer",
+                borderBottom: idx < filtered.length - 1 ? "1px solid var(--border)" : "none",
+                transition: "background .12s",
+              }}
+              onMouseEnter={e => e.currentTarget.style.background = "var(--accent)"}
+              onMouseLeave={e => e.currentTarget.style.background = "transparent"}
+            >
+              {/* Left: name + badge */}
+              <div style={{ display: "flex", flexDirection: "column", justifyContent: "center", gap: 4 }}>
+                <div style={{ fontSize: 14, fontWeight: 600, color: "var(--foreground)" }}>{acct.name}</div>
+                <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                  <span style={{ fontSize: 11, color: "var(--muted-foreground)" }}>{acct.currency}</span>
+                  {badgeStatus && <BadgeForStatus status={badgeStatus} />}
+                </div>
+              </div>
+
+              {/* Center: timeline dots */}
+              <div style={{ display: "flex", alignItems: "center", paddingLeft: 8, paddingRight: 8 }}>
+                {acct.months.map((st, i) => (
+                  <div key={i} style={{ flex: 1, display: "flex", alignItems: "center" }}>
+                    {i > 0 && (
+                      <div style={{ flex: 1, height: 1, background: "var(--border)", minWidth: 2 }} />
+                    )}
+                    <Dot status={st} />
+                  </div>
+                ))}
+              </div>
+
+              {/* Right: reconciled balance */}
+              <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", justifyContent: "center", gap: 2 }}>
+                <div style={{ fontSize: 11, fontWeight: 500, color: "var(--muted-foreground)", textTransform: "uppercase", letterSpacing: ".04em" }}>Reconciled balance</div>
+                <div style={{ fontSize: 14, fontWeight: 700, color: "var(--foreground)", fontVariantNumeric: "tabular-nums" }}>
+                  {acct.balance != null ? fmtCurrency(acct.balance, acct.currency) : "—"}
+                </div>
+              </div>
+            </div>
+          );
+        })}
+
+        {filtered.length === 0 && (
+          <div style={{ padding: "32px 18px", textAlign: "center", color: "var(--muted-foreground)", fontSize: 13 }}>
+            No accounts match your search.
+          </div>
+        )}
+      </Crd>
+    </div>
+  );
+}
+
+// Screen 0.5 — Account periods list
+function Screen05({ account, go }) {
+  const periods = HSBC_PERIODS; // in future, would be filtered by account.id
+
+  function statusBadge(status) {
+    if (status === "reconciled")      return <Badge v="positive">Reconciled</Badge>;
+    if (status === "needs_attention") return <Badge v="critical">Needs attention</Badge>;
+    if (status === "draft")           return <Badge v="neutral">Draft</Badge>;
+    if (status === "in_progress")     return <Badge v="neutral">In progress</Badge>;
+    return <Badge v="neutral">{status}</Badge>;
+  }
+
+  function ActionButtons({ status, period }) {
+    return (
+      <div style={{ display: "flex", alignItems: "center", gap: 6, justifyContent: "flex-end" }}>
+        {status === "needs_attention" && (
+          <Btn outline sm onClick={e => { e.stopPropagation(); go(period); }}>Resolve</Btn>
+        )}
+        {status === "reconciled" && (
+          <Btn outline sm onClick={e => { e.stopPropagation(); }}>View report</Btn>
+        )}
+        <button
+          onClick={e => e.stopPropagation()}
+          style={{
+            padding: "5px 6px", background: "transparent",
+            border: "1px solid var(--border)", borderRadius: "var(--radius)",
+            cursor: "pointer", color: "var(--muted-foreground)",
+            display: "flex", alignItems: "center", transition: "background .15s",
+          }}
+          onMouseEnter={e => e.currentTarget.style.background = "var(--accent)"}
+          onMouseLeave={e => e.currentTarget.style.background = "transparent"}
+        >
+          <MoreHorizontal size={14} />
+        </button>
+      </div>
+    );
+  }
+
+  return (
+    <div>
+      {/* Page title */}
+      <div style={{ marginBottom: 20 }}>
+        <h1 style={{ fontSize: 20, fontWeight: 700, color: "var(--foreground)", margin: "0 0 4px" }}>
+          {account?.name || "Account"}
+        </h1>
+        <div style={{ fontSize: 13, color: "var(--muted-foreground)" }}>
+          {account?.currency} · Select a period to start reconciling
+        </div>
+      </div>
+
+      {/* Periods table */}
+      <Crd style={{ overflow: "hidden" }}>
+        <table style={{ width: "100%", borderCollapse: "collapse" }}>
+          <thead>
+            <tr style={{ borderBottom: "1px solid var(--border)", background: "var(--muted)" }}>
+              {["Period", "Status", "Reconciled Balance", "Actions"].map((h, i) => (
+                <th key={i} style={{
+                  padding: "10px 18px",
+                  textAlign: i >= 2 ? "right" : "left",
+                  fontSize: 10, fontWeight: 600, color: "var(--muted-foreground)",
+                  textTransform: "uppercase", letterSpacing: ".04em",
+                }}>{h}</th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {periods.map((row, idx) => (
+              <tr
+                key={idx}
+                onClick={() => go(row)}
+                style={{
+                  borderBottom: idx < periods.length - 1 ? "1px solid var(--border)" : "none",
+                  cursor: "pointer", transition: "background .12s",
+                }}
+                onMouseEnter={e => e.currentTarget.style.background = "var(--accent)"}
+                onMouseLeave={e => e.currentTarget.style.background = "transparent"}
+              >
+                <td style={{ padding: "14px 18px", fontSize: 14, fontWeight: 500, color: "var(--foreground)" }}>
+                  {row.period}
+                </td>
+                <td style={{ padding: "14px 18px" }}>
+                  {statusBadge(row.status)}
+                </td>
+                <td style={{ padding: "14px 18px", textAlign: "right", fontSize: 14, fontWeight: 600, color: "var(--foreground)", fontVariantNumeric: "tabular-nums" }}>
+                  {fmtCurrency(row.balance, account?.currency || "GBP")}
+                </td>
+                <td style={{ padding: "14px 18px" }}>
+                  <ActionButtons status={row.status} period={row} />
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </Crd>
+    </div>
+  );
+}
+
 function Screen1({ go }) {
   const [ec, setEc] = useState(null);
   const [year, setYear] = useState(2025);
@@ -1692,8 +2001,16 @@ function Screen4({ go }) {
 
 // ── APP SHELL ──────────────────────────────────────────────────────────────
 export default function App() {
-  const [screen, setScreen] = useState(() => Number(new URLSearchParams(window.location.search).get('s') || 3));
+  const [screen, setScreen] = useState(() => Number(new URLSearchParams(window.location.search).get('s') || 0));
   const [collapsed, setCollapsed] = useState(false);
+  const [selectedAccount, setSelectedAccount] = useState(null);
+  const [selectedPeriod, setSelectedPeriod] = useState(null);
+
+  function handleBack() {
+    if (screen === 0.5) setScreen(0);
+    else if (screen === 1) setScreen(0.5);
+    else if (screen > 1 && screen !== 4) setScreen(s => s - 1);
+  }
 
   return (
     <ErrorBoundary>
@@ -1755,18 +2072,21 @@ export default function App() {
             onToggleCollapse={() => setCollapsed(c => !c)}
             screen={screen}
             onScreenChange={setScreen}
+            selectedAccount={selectedAccount}
           />
 
           <main style={{ flex: 1, overflowY: "auto", padding: "24px 24px 120px" }}>
-            {screen > 1 && screen !== 4 && (
-              <button onClick={() => setScreen(s => s - 1)} style={{ display: "flex", alignItems: "center", gap: 4, padding: "4px 0", background: "transparent", border: "none", fontSize: 12, color: "var(--muted-foreground)", cursor: "pointer", marginBottom: 12 }}>
+            {screen > 0 && screen !== 4 && (
+              <button onClick={handleBack} style={{ display: "flex", alignItems: "center", gap: 4, padding: "4px 0", background: "transparent", border: "none", fontSize: 12, color: "var(--muted-foreground)", cursor: "pointer", marginBottom: 12 }}>
                 ← Back
               </button>
             )}
-            {screen === 1 && <Screen1 go={() => setScreen(2)} />}
-            {screen === 2 && <Screen2 go={() => setScreen(3)} />}
-            {screen === 3 && <Screen3 go={() => setScreen(4)} />}
-            {screen === 4 && <Screen4 go={() => setScreen(1)} />}
+            {screen === 0   && <Screen0  go={acct => { setSelectedAccount(acct); setScreen(0.5); }} />}
+            {screen === 0.5 && <Screen05 account={selectedAccount} go={period => { setSelectedPeriod(period); setScreen(1); }} />}
+            {screen === 1   && <Screen1  go={() => setScreen(2)} />}
+            {screen === 2   && <Screen2  go={() => setScreen(3)} />}
+            {screen === 3   && <Screen3  go={() => setScreen(4)} />}
+            {screen === 4   && <Screen4  go={() => setScreen(0)} />}
           </main>
         </div>
       </div>
