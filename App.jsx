@@ -3,7 +3,7 @@ import {
   Home, ShoppingBag, ShoppingCart, PieChart, Package, Wallet, Users, Settings,
   ChevronRight, ChevronDown, PanelLeft, ArrowLeft, MoreVertical, LogOut,
   Eye, EyeOff, Sun, CreditCard, Layers, Shield, KeyRound, HelpCircle, User, SlidersHorizontal,
-  Pencil, Check, X, Search, Plus, Minus, MoreHorizontal, Filter,
+  Pencil, Check, X, Search, Plus, Minus, MoreHorizontal, Filter, Sparkles,
 } from "lucide-react";
 
 // ── Error Boundary ─────────────────────────────────────────────────────────
@@ -172,6 +172,135 @@ function SumRow({ items }) {
   );
 }
 
+// ── Period Combobox ─────────────────────────────────────────────────────────
+function PeriodCombobox({ start, end, onStartChange, onEndChange }) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef(null);
+  useEffect(() => {
+    function handle(e) { if (ref.current && !ref.current.contains(e.target)) setOpen(false); }
+    document.addEventListener("mousedown", handle);
+    return () => document.removeEventListener("mousedown", handle);
+  }, []);
+
+  function fmt(val) {
+    if (!val) return "—";
+    const d = new Date(val + "T00:00:00");
+    return d.toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" });
+  }
+
+  const display = start && end ? `${fmt(start)} – ${fmt(end)}` : start ? `From ${fmt(start)}` : "Select period";
+
+  return (
+    <div ref={ref} style={{ flex: 1.4, position: "relative" }}>
+      <div
+        onClick={() => setOpen(o => !o)}
+        style={{
+          padding: "10px 16px", background: "var(--card)",
+          borderRadius: "var(--radius)", border: `1px solid ${open ? "var(--primary)" : "var(--border)"}`,
+          boxShadow: "0 1px 3px rgba(0,0,0,.06)", cursor: "pointer",
+          transition: "border-color .15s",
+        }}
+      >
+        <div style={{ fontSize: 10, fontWeight: 600, color: "var(--muted-foreground)", textTransform: "uppercase", letterSpacing: ".06em", marginBottom: 3 }}>Period</div>
+        <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+          <span style={{ fontSize: 14, fontWeight: 600, color: "var(--foreground)", fontVariantNumeric: "tabular-nums", flex: 1 }}>{display}</span>
+          <ChevronDown size={13} style={{ color: "var(--muted-foreground)", flexShrink: 0, transform: open ? "rotate(180deg)" : "none", transition: "transform .2s" }} />
+        </div>
+      </div>
+      {open && (
+        <div style={{
+          position: "absolute", top: "calc(100% + 6px)", left: 0, zIndex: 300,
+          background: "var(--card)", border: "1px solid var(--border)",
+          borderRadius: "calc(var(--radius) + 2px)", boxShadow: "0 8px 24px rgba(0,0,0,.12)",
+          padding: 16, minWidth: 260,
+        }}>
+          <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+            <div>
+              <div style={{ fontSize: 10, fontWeight: 600, color: "var(--muted-foreground)", textTransform: "uppercase", letterSpacing: ".06em", marginBottom: 6 }}>Start date</div>
+              <input
+                type="date" value={start} onChange={e => onStartChange(e.target.value)}
+                style={{
+                  width: "100%", padding: "7px 10px", fontSize: 13, fontWeight: 500,
+                  color: "var(--foreground)", background: "var(--background)",
+                  border: "1px solid var(--border)", borderRadius: "var(--radius)",
+                  outline: "none", cursor: "pointer", boxSizing: "border-box",
+                }}
+                onFocus={e => e.target.style.borderColor = "var(--primary)"}
+                onBlur={e => e.target.style.borderColor = "var(--border)"}
+              />
+            </div>
+            <div>
+              <div style={{ fontSize: 10, fontWeight: 600, color: "var(--muted-foreground)", textTransform: "uppercase", letterSpacing: ".06em", marginBottom: 6 }}>End date</div>
+              <input
+                type="date" value={end} onChange={e => onEndChange(e.target.value)}
+                style={{
+                  width: "100%", padding: "7px 10px", fontSize: 13, fontWeight: 500,
+                  color: "var(--foreground)", background: "var(--background)",
+                  border: "1px solid var(--border)", borderRadius: "var(--radius)",
+                  outline: "none", cursor: "pointer", boxSizing: "border-box",
+                }}
+                onFocus={e => e.target.style.borderColor = "var(--primary)"}
+                onBlur={e => e.target.style.borderColor = "var(--border)"}
+              />
+            </div>
+            <button
+              onClick={() => setOpen(false)}
+              style={{
+                padding: "7px 0", background: "var(--primary)", color: "#fff",
+                border: "none", borderRadius: "var(--radius)", fontSize: 13,
+                fontWeight: 600, cursor: "pointer",
+              }}
+            >Apply</button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ── Shared Stats Bar (Screen1 + Screen3) ────────────────────────────────────
+function StatsBar({ start, end, onStartChange, onEndChange, stmtBal, onStmtBalChange }) {
+  const ledgerTotal = 142834.72;
+  const parsed = parseFloat((stmtBal || "").replace(/,/g, ""));
+  const hasBal = stmtBal && !isNaN(parsed);
+  const diff = hasBal ? parsed - ledgerTotal : 0;
+  const diffZero = Math.abs(diff) < 0.01;
+
+  return (
+    <div style={{ display: "flex", gap: 16, padding: "10px 0" }}>
+      {/* Tile 1: Period combobox */}
+      <PeriodCombobox start={start} end={end} onStartChange={onStartChange} onEndChange={onEndChange} />
+
+      {/* Tile 2: Beginning Balance */}
+      <div style={{ flex: 1, padding: "10px 16px", background: "var(--card)", borderRadius: "var(--radius)", border: "1px solid var(--border)", boxShadow: "0 1px 3px rgba(0,0,0,.06)" }}>
+        <div style={{ fontSize: 10, fontWeight: 600, color: "var(--muted-foreground)", textTransform: "uppercase", letterSpacing: ".06em", marginBottom: 3 }}>Beginning Balance</div>
+        <div style={{ fontSize: 17, fontWeight: 700, color: "var(--foreground)", fontVariantNumeric: "tabular-nums" }}>£130,347.28</div>
+        <div style={{ fontSize: 11, color: "var(--muted-foreground)", marginTop: 1 }}>From prev. reconciliation</div>
+      </div>
+
+      {/* Tile 3: Statement Balance (editable) */}
+      <StmtBalanceField value={stmtBal} onChange={onStmtBalChange} />
+
+      {/* Tile 4: Difference (only when statement entered) */}
+      {hasBal && (
+        <div style={{
+          flex: 1, padding: "10px 16px",
+          background: diffZero ? "rgba(0,232,157,.04)" : "rgba(255,39,95,.03)",
+          borderRadius: "var(--radius)",
+          border: `1px solid ${diffZero ? "rgba(0,232,157,.15)" : "rgba(255,39,95,.12)"}`,
+          boxShadow: "0 1px 3px rgba(0,0,0,.04)",
+        }}>
+          <div style={{ fontSize: 10, fontWeight: 600, color: "var(--muted-foreground)", textTransform: "uppercase", letterSpacing: ".06em", marginBottom: 3 }}>Difference</div>
+          <div style={{ fontSize: 17, fontWeight: 700, color: diffZero ? "var(--positive)" : "var(--destructive)", fontVariantNumeric: "tabular-nums" }}>
+            {diffZero ? "£0.00" : (diff < 0 ? "−" : "+") + "£" + Math.abs(diff).toLocaleString("en-GB", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+          </div>
+          {diffZero && <div style={{ fontSize: 11, color: "var(--positive)", marginTop: 1 }}>Balanced ✓</div>}
+        </div>
+      )}
+    </div>
+  );
+}
+
 function Separator({ vertical }) {
   return (
     <div style={vertical
@@ -325,8 +454,8 @@ function BalanceBanner({ selL, selR, allItems, onResolve }) {
   if (!selL.length && !selR.length) return null;
   return (
     <div style={{
-      position: "sticky", bottom: 0, zIndex: 50,
-      margin: "0 -24px", padding: "12px 24px",
+      position: "fixed", bottom: 0, left: "var(--sidebar-w)", right: 0, zIndex: 50,
+      padding: "12px 24px",
       background: "rgba(255,255,255,.95)", backdropFilter: "blur(8px)",
       borderTop: "1px solid var(--border)",
       boxShadow: "0 -4px 20px rgba(0,0,0,.06)",
@@ -357,7 +486,7 @@ function BalanceBanner({ selL, selR, allItems, onResolve }) {
   );
 }
 
-// ── Confidence Box — two-action model (Change 3) ───────────────────────────
+// ── AI Matching Bridge — two-action model (Change 3) ────────────────────────
 function ConfBox({ item, onAccept, onUpdate, onResolveUpdated, onDismissBoth }) {
   const confColor = item.conf >= 90 ? "var(--positive)" : item.conf >= 70 ? "var(--warning)" : "var(--destructive)";
 
@@ -1308,8 +1437,9 @@ function Screen05({ account, go }) {
 
 function Screen1({ go }) {
   const [ec, setEc] = useState(null);
-  const [year, setYear] = useState(2025);
-  const rc = LEDGER.filter(t => t.st === "reconciled").length;
+  const [stmtBal, setStmtBal] = useState("");
+  const [periodStart, setPeriodStart] = useState("2025-04-01");
+  const [periodEnd, setPeriodEnd] = useState("2025-06-30");
   return (
     <div>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 20 }}>
@@ -1318,7 +1448,7 @@ function Screen1({ go }) {
             <h1 style={{ fontSize: 20, fontWeight: 700, color: "var(--foreground)", margin: 0 }}>HSBC Current Account</h1>
             <Badge v="warning">Draft</Badge>
           </div>
-          <div style={{ fontSize: 13, color: "var(--muted-foreground)" }}>1 Apr – 30 Jun {year} · {LEDGER.length} transactions</div>
+          <div style={{ fontSize: 13, color: "var(--muted-foreground)" }}>{LEDGER.length} transactions</div>
         </div>
         <div style={{ display: "flex", gap: 8 }}>
           <Btn outline sm onClick={go}>↑ Upload Statement</Btn>
@@ -1326,8 +1456,14 @@ function Screen1({ go }) {
         </div>
       </div>
 
-      {/* Filter row with year selector (Change 1) */}
-      <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 12 }}>
+      <StatsBar
+        start={periodStart} end={periodEnd}
+        onStartChange={setPeriodStart} onEndChange={setPeriodEnd}
+        stmtBal={stmtBal} onStmtBalChange={setStmtBal}
+      />
+
+      {/* Filter row */}
+      <div style={{ display: "flex", alignItems: "center", gap: 8, margin: "12px 0" }}>
         <input placeholder="Search…" style={{
           flex: 1, maxWidth: 220, padding: "6px 10px",
           border: "1px solid var(--border)", borderRadius: "var(--radius)",
@@ -1339,17 +1475,7 @@ function Screen1({ go }) {
         <select style={{ padding: "6px 10px", border: "1px solid var(--border)", borderRadius: "var(--radius)", fontSize: 13, color: "var(--muted-foreground)", background: "var(--background)", cursor: "pointer", outline: "none" }}>
           <option>Status ▾</option>
         </select>
-        <div style={{ marginLeft: "auto" }}>
-          <YearSelector year={year} onChange={setYear} />
-        </div>
       </div>
-
-      <SumRow items={[
-        { label: "Beginning Balance", value: "£130,347.28" },
-        { label: "Statement", value: "—", sub: "No statement" },
-        { label: "Ledger Total", value: "£142,834.72" },
-        { label: "Matched", value: rc + " of " + LEDGER.length, sub: (LEDGER.length - rc) + " unreconciled" },
-      ]} />
       <Crd style={{ marginTop: 12 }}>
         <table style={{ width: "100%", borderCollapse: "collapse" }}>
           <thead>
@@ -1429,12 +1555,12 @@ function StmtBalanceField({ value, onChange }) {
   function startEdit() { setEditing(true); setTimeout(() => inputRef.current?.select(), 0); }
   function commitEdit() { setEditing(false); }
   return (
-    <div style={{ flex: 1, padding: "8px 14px", background: "var(--card)", borderRadius: "var(--radius)", border: "1px solid var(--border)", boxShadow: "0 1px 3px rgba(0,0,0,.06)" }}>
-      <div style={{ fontSize: 10, fontWeight: 600, color: "var(--muted-foreground)", textTransform: "uppercase", letterSpacing: ".06em", marginBottom: 4 }}>Statement Balance</div>
+    <div style={{ flex: 1, padding: "10px 16px", background: "var(--card)", borderRadius: "var(--radius)", border: "1px solid var(--border)", boxShadow: "0 1px 3px rgba(0,0,0,.06)" }}>
+      <div style={{ fontSize: 10, fontWeight: 600, color: "var(--muted-foreground)", textTransform: "uppercase", letterSpacing: ".06em", marginBottom: 3 }}>Statement Balance</div>
       <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
         {editing ? (
           <>
-            <span style={{ fontSize: 14, fontWeight: 600, color: "var(--foreground)" }}>£</span>
+            <span style={{ fontSize: 17, fontWeight: 700, color: "var(--foreground)" }}>£</span>
             <input
               ref={inputRef}
               value={value}
@@ -1442,7 +1568,7 @@ function StmtBalanceField({ value, onChange }) {
               onBlur={commitEdit}
               onKeyDown={e => { if (e.key === "Enter" || e.key === "Escape") commitEdit(); }}
               style={{
-                flex: 1, fontSize: 14, fontWeight: 600, color: "var(--foreground)",
+                flex: 1, fontSize: 17, fontWeight: 700, color: "var(--foreground)",
                 border: "none", outline: "none", background: "transparent",
                 fontVariantNumeric: "tabular-nums", minWidth: 0,
               }}
@@ -1451,9 +1577,9 @@ function StmtBalanceField({ value, onChange }) {
               <Check size={13} />
             </button>
           </>
-        ) : (
+        ) : value ? (
           <>
-            <span style={{ flex: 1, fontSize: 14, fontWeight: 600, color: "var(--foreground)", fontVariantNumeric: "tabular-nums" }}>£{value}</span>
+            <span style={{ flex: 1, fontSize: 17, fontWeight: 700, color: "var(--foreground)", fontVariantNumeric: "tabular-nums" }}>£{value}</span>
             <button onClick={startEdit} style={{
               flexShrink: 0, padding: 4, background: "transparent",
               border: "1px solid var(--border)", borderRadius: "var(--radius)",
@@ -1466,6 +1592,16 @@ function StmtBalanceField({ value, onChange }) {
               <Pencil size={11} />
             </button>
           </>
+        ) : (
+          <button onClick={startEdit} style={{
+            padding: "3px 10px", background: "transparent",
+            border: "1px dashed var(--border)", borderRadius: "var(--radius)",
+            cursor: "pointer", color: "var(--muted-foreground)", fontSize: 13,
+            fontWeight: 500, transition: "background .15s, border-color .15s",
+          }}
+            onMouseEnter={e => { e.currentTarget.style.background = "var(--accent)"; e.currentTarget.style.borderColor = "var(--primary)"; }}
+            onMouseLeave={e => { e.currentTarget.style.background = "transparent"; e.currentTarget.style.borderColor = "var(--border)"; }}
+          >+ Enter balance</button>
         )}
       </div>
     </div>
@@ -1485,6 +1621,8 @@ function Screen3({ go }) {
   const [toast, setToast] = useState(null);
   // Change 2: editable statement balance
   const [stmtBal, setStmtBal] = useState("142890.50");
+  const [periodStart, setPeriodStart] = useState("2025-04-01");
+  const [periodEnd, setPeriodEnd] = useState("2025-06-30");
   // Track which "not in ledger" rows have had a ledger entry created
   const [createdLedger, setCreatedLedger] = useState({});
   // Track picked candidate for duplicate items (future extensibility)
@@ -1495,6 +1633,31 @@ function Screen3({ go }) {
   // TASK-06: independent search per column
   const [searchL, setSearchL] = useState("");
   const [searchR, setSearchR] = useState("");
+
+  // Derived filtered lists — each search filters only its own side independently
+  function matchesSide(side, q) {
+    if (!q) return true;
+    if (!side) return false;
+    const s = q.toLowerCase();
+    return (side.n || "").toLowerCase().includes(s) || (side.d || "").toLowerCase().includes(s);
+  }
+  // Each search independently shows/hides its own side only.
+  // An item row is visible if at least one side is visible.
+  function itemLVisible(item) {
+    if (!searchL) return true;
+    const lSide = item.L || (item.candidates && item.candidates[0]);
+    return matchesSide(lSide, searchL);
+  }
+  function itemRVisible(item) {
+    if (!searchR) return true;
+    return matchesSide(item.R, searchR);
+  }
+  const filteredAttention = attention.filter(item => itemLVisible(item) || itemRVisible(item));
+  const filteredMatched = matched.filter(item => {
+    const passL = !searchL || matchesSide(item.L, searchL);
+    const passR = !searchR || matchesSide(item.R, searchR);
+    return passL || passR;
+  });
 
   function flash(m) { setToast(m); setTimeout(() => setToast(null), 2200); }
 
@@ -1671,44 +1834,15 @@ function Screen3({ go }) {
         </div>
       </div>
 
-      {/* Balance header */}
-      <div style={{ display: "flex", gap: 2, padding: "10px 0", marginBottom: 4 }}>
-
-        {/* Date range — single tile with two pickers */}
-        <div style={{ flex: 1.4, padding: "8px 14px", background: "var(--card)", borderRadius: "var(--radius)", border: "1px solid var(--border)", boxShadow: "0 1px 3px rgba(0,0,0,.06)" }}>
-          <div style={{ fontSize: 10, fontWeight: 600, color: "var(--muted-foreground)", textTransform: "uppercase", letterSpacing: ".06em", marginBottom: 4 }}>Period</div>
-          <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-            <input type="date" defaultValue="2025-04-01"
-              style={{ fontSize: 13, fontWeight: 500, color: "var(--foreground)", border: "none", outline: "none", background: "transparent", cursor: "pointer", minWidth: 0, flex: 1 }} />
-            <span style={{ color: "var(--muted-foreground)", fontSize: 12, flexShrink: 0 }}>→</span>
-            <input type="date" defaultValue="2025-06-30"
-              style={{ fontSize: 13, fontWeight: 500, color: "var(--foreground)", border: "none", outline: "none", background: "transparent", cursor: "pointer", minWidth: 0, flex: 1 }} />
-          </div>
-        </div>
-
-        {/* Beginning Balance — read-only, from prev reconciliation */}
-        <div style={{ flex: 1, padding: "8px 14px", background: "var(--card)", borderRadius: "var(--radius)", border: "1px solid var(--border)", boxShadow: "0 1px 3px rgba(0,0,0,.06)" }}>
-          <div style={{ fontSize: 10, fontWeight: 600, color: "var(--muted-foreground)", textTransform: "uppercase", letterSpacing: ".06em", marginBottom: 4 }}>Beginning Balance</div>
-          <div style={{ fontSize: 14, fontWeight: 600, color: "var(--foreground)", fontVariantNumeric: "tabular-nums" }}>£130,347.28</div>
-          <div style={{ fontSize: 10, color: "var(--muted-foreground)", marginTop: 2 }}>From prev. reconciliation</div>
-        </div>
-
-        {/* Statement Balance — read-only with pencil to enter edit mode */}
-        <StmtBalanceField value={stmtBal} onChange={setStmtBal} />
-
-        {/* Difference */}
-        {stmtBal && (
-          <div style={{ flex: 1, padding: "8px 14px", background: diffZero ? "rgba(0,232,157,.04)" : "rgba(255,39,95,.03)", borderRadius: "var(--radius)", border: `1px solid ${diffZero ? "rgba(0,232,157,.15)" : "rgba(255,39,95,.12)"}`, boxShadow: "0 1px 3px rgba(0,0,0,.04)" }}>
-            <div style={{ fontSize: 10, fontWeight: 600, color: "var(--muted-foreground)", textTransform: "uppercase", letterSpacing: ".06em", marginBottom: 4 }}>Difference</div>
-            <div style={{ fontSize: 14, fontWeight: 700, color: diffZero ? "var(--positive)" : "var(--destructive)", fontVariantNumeric: "tabular-nums" }}>
-              {diffZero ? "£0.00" : (diff < 0 ? "−" : "+") + "£" + Math.abs(diff).toLocaleString("en-GB", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-            </div>
-          </div>
-        )}
-      </div>
+      {/* Stats bar — shared with Screen1 */}
+      <StatsBar
+        start={periodStart} end={periodEnd}
+        onStartChange={setPeriodStart} onEndChange={setPeriodEnd}
+        stmtBal={stmtBal} onStmtBalChange={setStmtBal}
+      />
 
       {/* Column labels + TASK-06 search/add controls */}
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 180px 1fr", gap: 8, padding: "10px 18px 8px", borderTop: "1px solid var(--border)", marginTop: 4 }}>
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 180px 1fr", gap: 8, padding: "10px 0 8px", borderTop: "1px solid var(--border)", marginTop: 4 }}>
         {/* Left: label + search + add/expense buttons */}
         <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
           <div style={{ fontSize: 11, fontWeight: 600, color: "var(--primary)", textTransform: "uppercase", letterSpacing: ".05em" }}>Fiskl Ledger</div>
@@ -1755,9 +1889,21 @@ function Screen3({ go }) {
             </Tooltip>
           </div>
         </div>
-        {/* Center: confidence label */}
+        {/* Center: AI Matching Bridge label */}
         <div style={{ display: "flex", alignItems: "flex-end", justifyContent: "center", paddingBottom: 2 }}>
-          <div style={{ fontSize: 11, fontWeight: 600, color: "var(--muted-foreground)", textTransform: "uppercase", textAlign: "center" }}>Confidence</div>
+          <div style={{ display: "flex", alignItems: "center", gap: 5 }}>
+            <Sparkles size={13} style={{ flexShrink: 0, stroke: "url(#sparklesGrad)" }} />
+            <svg width={0} height={0} style={{ position: "absolute" }}>
+              <defs>
+                <linearGradient id="sparklesGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+                  <stop offset="0%"   stopColor="#0058FF" />
+                  <stop offset="45%"  stopColor="#00B4FF" />
+                  <stop offset="100%" stopColor="#00E0A0" />
+                </linearGradient>
+              </defs>
+            </svg>
+            <span style={{ fontSize: 11, fontWeight: 600, background: "linear-gradient(92deg,#0058FF 0%,#00B4FF 45%,#00E0A0 100%)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent", backgroundClip: "text", textTransform: "uppercase", letterSpacing: ".04em", whiteSpace: "nowrap" }}>AI Matching Bridge</span>
+          </div>
         </div>
         {/* Right: label + search */}
         <div style={{ display: "flex", flexDirection: "column", gap: 6, alignItems: "flex-end" }}>
@@ -1783,18 +1929,23 @@ function Screen3({ go }) {
 
       {/* Needs Attention */}
       <Crd style={{ marginBottom: 12, overflow: "hidden", borderColor: "rgba(255,89,5,.15)", background: "rgba(255,89,5,.01)" }}>
-        <SecHdr icon="⚠" color="var(--warning)" title="Needs Attention" itemCount={attention.length} open={attOpen} onToggle={() => setAttOpen(!attOpen)} />
+        <SecHdr icon="⚠" color="var(--warning)" title="Needs Attention" itemCount={filteredAttention.length} open={attOpen} onToggle={() => setAttOpen(!attOpen)} />
         {attOpen && (
           <div style={{ padding: "0 14px 14px", display: "flex", flexDirection: "column", gap: 8 }}>
             {attention.length === 0
               ? <div style={{ textAlign: "center", padding: "20px 0", color: "var(--positive)", fontSize: 14, fontWeight: 600 }}>✓ All items resolved</div>
-              : attention.map(item => {
+              : filteredAttention.length === 0
+              ? <div style={{ textAlign: "center", padding: "20px 0", color: "var(--muted-foreground)", fontSize: 13 }}>No results match your search</div>
+              : filteredAttention.map(item => {
                   const isNotInLedger = !item.L && !item.aiSuggested;
                   const wasCreated = createdLedger[item.id];
+                  const showL = itemLVisible(item);
+                  const showR = itemRVisible(item);
+                  const showBridge = showL && showR;
                   return (
                     <div key={item.id} style={{ display: "grid", gridTemplateColumns: "1fr 180px 1fr", gap: 8 }}>
                       {/* Left: Ledger side */}
-                      {item.type === "Duplicate" && item.candidates?.length
+                      {!showL ? <div /> : item.type === "Duplicate" && item.candidates?.length
                         ? (
                           <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
                             {item.candidates.map((c, i) => {
@@ -1826,8 +1977,8 @@ function Screen3({ go }) {
                           ? <LedgerItem item={item.L} checked={selL.includes(item.id)} onCheck={() => toggleSelL(item.id)} onEdit={() => setEditTarget(item)} />
                           : <div />
                       }
-                      {/* Center column */}
-                      {isNotInLedger || wasCreated
+                      {/* Center column — only when both sides visible */}
+                      {!showBridge ? <div /> : isNotInLedger || wasCreated
                         ? <NotInLedgerCenter
                             statementItem={item.R}
                             created={wasCreated}
@@ -1845,7 +1996,10 @@ function Screen3({ go }) {
                             </div>
                           )
                       }
-                      <StatementItem item={item.R} checked={selR.includes(item.id)} onCheck={() => toggleSelR(item.id)} />
+                      {showR
+                        ? <StatementItem item={item.R} checked={selR.includes(item.id)} onCheck={() => toggleSelR(item.id)} />
+                        : <div />
+                      }
                     </div>
                   );
                 })
@@ -1908,11 +2062,19 @@ function Screen3({ go }) {
 
       {/* Auto Matched */}
       <Crd style={{ marginBottom: 12, overflow: "hidden", borderColor: "rgba(0,232,157,.15)" }}>
-        <SecHdr icon="✓" color="var(--positive)" title="Auto Matched" itemCount={matched.length} totalAmt={matchTotal} open={matchOpen} onToggle={() => setMatchOpen(!matchOpen)} />
+        <SecHdr icon="✓" color="var(--positive)" title="Auto Matched" itemCount={filteredMatched.length} totalAmt={matchTotal} open={matchOpen} onToggle={() => setMatchOpen(!matchOpen)} />
         {matchOpen && (
           <div style={{ padding: "0 14px 14px" }}>
-            {matched.map(m => (
+            {filteredMatched.length === 0 && matched.length > 0 && (
+              <div style={{ textAlign: "center", padding: "20px 0", color: "var(--muted-foreground)", fontSize: 13 }}>No results match your search</div>
+            )}
+            {filteredMatched.map(m => {
+              const mShowL = !searchL || matchesSide(m.L, searchL);
+              const mShowR = !searchR || matchesSide(m.R, searchR);
+              const mShowBridge = mShowL && mShowR;
+              return (
               <div key={m.id} style={{ display: "grid", gridTemplateColumns: "1fr 180px 1fr", gap: 8, padding: "6px 0", borderBottom: "1px solid var(--border)" }}>
+                {mShowL ? (
                 <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
                   <input type="checkbox" checked={true} onChange={() => uncheckMatched(m.id)} style={{ accentColor: "var(--positive)" }} title="Uncheck to move back" />
                   <div style={{ flex: 1, minWidth: 0 }}>
@@ -1923,10 +2085,14 @@ function Screen3({ go }) {
                     <div style={{ fontSize: 12, fontWeight: 500, color: "var(--foreground)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{m.L.n}</div>
                   </div>
                 </div>
+                ) : <div />}
+                {mShowBridge ? (
                 <div style={{ display: "flex", alignItems: "center", justifyContent: "center", flexDirection: "column", gap: 3 }}>
                   <Badge v="ai" xs>AI</Badge>
                   <span style={{ fontSize: 11, fontWeight: 700, color: "var(--positive)" }}>{m.conf}%</span>
                 </div>
+                ) : <div />}
+                {mShowR ? (
                 <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
                   <input type="checkbox" checked={true} onChange={() => uncheckMatched(m.id)} style={{ accentColor: "var(--positive)" }} />
                   <div style={{ flex: 1, minWidth: 0 }}>
@@ -1937,8 +2103,10 @@ function Screen3({ go }) {
                     <div style={{ fontSize: 12, fontWeight: 500, color: "var(--foreground)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{m.R.n}</div>
                   </div>
                 </div>
+                ) : <div />}
               </div>
-            ))}
+              );
+            })}
           </div>
         )}
       </Crd>
@@ -2061,7 +2229,7 @@ export default function App() {
         }
       `}</style>
 
-      <div style={{ display: "flex", height: "100vh", background: "var(--background)", color: "var(--foreground)" }}>
+      <div style={{ display: "flex", height: "100vh", background: "var(--background)", color: "var(--foreground)", ["--sidebar-w"]: collapsed ? "48px" : "256px" }}>
         <Sidebar collapsed={collapsed} onToggle={() => setCollapsed(c => !c)} />
 
         <div style={{ flex: 1, display: "flex", flexDirection: "column", minWidth: 0, overflow: "hidden" }}>
