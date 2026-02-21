@@ -3,7 +3,7 @@ import {
   Home, ShoppingBag, ShoppingCart, PieChart, Package, Wallet, Users, Settings,
   ChevronRight, ChevronDown, PanelLeft, ArrowLeft, MoreVertical, LogOut,
   Eye, EyeOff, Sun, CreditCard, Layers, Shield, KeyRound, HelpCircle, User, SlidersHorizontal,
-  Pencil, Check, X, Search, Plus, Minus, MoreHorizontal, Filter, Sparkles,
+  Pencil, Check, X, Search, Plus, Minus, MoreHorizontal, Filter, Sparkles, Lock,
 } from "lucide-react";
 
 // ── Error Boundary ─────────────────────────────────────────────────────────
@@ -173,14 +173,19 @@ function SumRow({ items }) {
 }
 
 // ── Period Combobox ─────────────────────────────────────────────────────────
-function PeriodCombobox({ start, end, onStartChange, onEndChange }) {
-  const [open, setOpen] = useState(false);
-  const ref = useRef(null);
-  useEffect(() => {
-    function handle(e) { if (ref.current && !ref.current.contains(e.target)) setOpen(false); }
-    document.addEventListener("mousedown", handle);
-    return () => document.removeEventListener("mousedown", handle);
-  }, []);
+// ── Shared Stats Bar (Screen1 + Screen3) ────────────────────────────────────
+function StatsBar({ start, end, onStartChange, onEndChange, stmtBal, onStmtBalChange, startLocked = true }) {
+  const ledgerTotal = 142834.72;
+  const parsed = parseFloat((stmtBal || "").replace(/,/g, ""));
+  const hasBal = stmtBal && !isNaN(parsed);
+  const diff = hasBal ? parsed - ledgerTotal : 0;
+  const diffZero = Math.abs(diff) < 0.01;
+
+  const endInputRef = useRef(null);
+  const [endFocused, setEndFocused] = useState(false);
+  // For unlocked start date editing
+  const startInputRef = useRef(null);
+  const [startFocused, setStartFocused] = useState(false);
 
   function fmt(val) {
     if (!val) return "—";
@@ -188,113 +193,87 @@ function PeriodCombobox({ start, end, onStartChange, onEndChange }) {
     return d.toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" });
   }
 
-  const display = start && end ? `${fmt(start)} – ${fmt(end)}` : start ? `From ${fmt(start)}` : "Select period";
-
-  return (
-    <div ref={ref} style={{ flex: 1.4, position: "relative" }}>
-      <div
-        onClick={() => setOpen(o => !o)}
-        style={{
-          padding: "10px 16px", background: "var(--card)",
-          borderRadius: "var(--radius)", border: `1px solid ${open ? "var(--primary)" : "var(--border)"}`,
-          boxShadow: "0 1px 3px rgba(0,0,0,.06)", cursor: "pointer",
-          transition: "border-color .15s",
-        }}
-      >
-        <div style={{ fontSize: 10, fontWeight: 600, color: "var(--muted-foreground)", textTransform: "uppercase", letterSpacing: ".06em", marginBottom: 3 }}>Period</div>
-        <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-          <span style={{ fontSize: 14, fontWeight: 600, color: "var(--foreground)", fontVariantNumeric: "tabular-nums", flex: 1 }}>{display}</span>
-          <ChevronDown size={13} style={{ color: "var(--muted-foreground)", flexShrink: 0, transform: open ? "rotate(180deg)" : "none", transition: "transform .2s" }} />
-        </div>
-      </div>
-      {open && (
-        <div style={{
-          position: "absolute", top: "calc(100% + 6px)", left: 0, zIndex: 300,
-          background: "var(--card)", border: "1px solid var(--border)",
-          borderRadius: "calc(var(--radius) + 2px)", boxShadow: "0 8px 24px rgba(0,0,0,.12)",
-          padding: 16, minWidth: 260,
-        }}>
-          <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-            <div>
-              <div style={{ fontSize: 10, fontWeight: 600, color: "var(--muted-foreground)", textTransform: "uppercase", letterSpacing: ".06em", marginBottom: 6 }}>Start date</div>
-              <input
-                type="date" value={start} onChange={e => onStartChange(e.target.value)}
-                style={{
-                  width: "100%", padding: "7px 10px", fontSize: 13, fontWeight: 500,
-                  color: "var(--foreground)", background: "var(--background)",
-                  border: "1px solid var(--border)", borderRadius: "var(--radius)",
-                  outline: "none", cursor: "pointer", boxSizing: "border-box",
-                }}
-                onFocus={e => e.target.style.borderColor = "var(--primary)"}
-                onBlur={e => e.target.style.borderColor = "var(--border)"}
-              />
-            </div>
-            <div>
-              <div style={{ fontSize: 10, fontWeight: 600, color: "var(--muted-foreground)", textTransform: "uppercase", letterSpacing: ".06em", marginBottom: 6 }}>End date</div>
-              <input
-                type="date" value={end} onChange={e => onEndChange(e.target.value)}
-                style={{
-                  width: "100%", padding: "7px 10px", fontSize: 13, fontWeight: 500,
-                  color: "var(--foreground)", background: "var(--background)",
-                  border: "1px solid var(--border)", borderRadius: "var(--radius)",
-                  outline: "none", cursor: "pointer", boxSizing: "border-box",
-                }}
-                onFocus={e => e.target.style.borderColor = "var(--primary)"}
-                onBlur={e => e.target.style.borderColor = "var(--border)"}
-              />
-            </div>
-            <button
-              onClick={() => setOpen(false)}
-              style={{
-                padding: "7px 0", background: "var(--primary)", color: "#fff",
-                border: "none", borderRadius: "var(--radius)", fontSize: 13,
-                fontWeight: 600, cursor: "pointer",
-              }}
-            >Apply</button>
-          </div>
-        </div>
-      )}
-    </div>
-  );
-}
-
-// ── Shared Stats Bar (Screen1 + Screen3) ────────────────────────────────────
-function StatsBar({ start, end, onStartChange, onEndChange, stmtBal, onStmtBalChange }) {
-  const ledgerTotal = 142834.72;
-  const parsed = parseFloat((stmtBal || "").replace(/,/g, ""));
-  const hasBal = stmtBal && !isNaN(parsed);
-  const diff = hasBal ? parsed - ledgerTotal : 0;
-  const diffZero = Math.abs(diff) < 0.01;
+  const tileBase = {
+    flex: 1, padding: "10px 16px", background: "var(--card)",
+    borderRadius: "var(--radius)", boxShadow: "0 1px 3px rgba(0,0,0,.06)",
+  };
+  const labelStyle = {
+    fontSize: 10, fontWeight: 600, color: "var(--muted-foreground)",
+    textTransform: "uppercase", letterSpacing: ".06em", marginBottom: 3,
+  };
+  const valueStyle = {
+    fontSize: 17, fontWeight: 700, color: "var(--foreground)", fontVariantNumeric: "tabular-nums",
+  };
+  const subStyle = { fontSize: 11, color: "var(--muted-foreground)", marginTop: 1 };
 
   return (
     <div style={{ display: "flex", gap: 16, padding: "10px 0" }}>
-      {/* Tile 1: Period combobox */}
-      <PeriodCombobox start={start} end={end} onStartChange={onStartChange} onEndChange={onEndChange} />
 
-      {/* Tile 2: Beginning Balance */}
-      <div style={{ flex: 1, padding: "10px 16px", background: "var(--card)", borderRadius: "var(--radius)", border: "1px solid var(--border)", boxShadow: "0 1px 3px rgba(0,0,0,.06)" }}>
-        <div style={{ fontSize: 10, fontWeight: 600, color: "var(--muted-foreground)", textTransform: "uppercase", letterSpacing: ".06em", marginBottom: 3 }}>Beginning Balance</div>
-        <div style={{ fontSize: 17, fontWeight: 700, color: "var(--foreground)", fontVariantNumeric: "tabular-nums" }}>£130,347.28</div>
-        <div style={{ fontSize: 11, color: "var(--muted-foreground)", marginTop: 1 }}>From prev. reconciliation</div>
+      {/* Tile 1: Start Date — locked or editable */}
+      <div
+        style={{ ...tileBase, border: `1px solid ${startFocused ? "var(--primary)" : "var(--border)"}`, position: "relative", cursor: startLocked ? "default" : "pointer" }}
+        onClick={() => { if (!startLocked) startInputRef.current?.showPicker(); }}
+      >
+        <div style={{ ...labelStyle, display: "flex", alignItems: "center", gap: 4 }}>
+          Start Date
+          {startLocked && <Lock size={9} style={{ color: "var(--muted-foreground)", flexShrink: 0 }} />}
+        </div>
+        <div style={valueStyle}>{fmt(start)}</div>
+        <div style={subStyle}>{startLocked ? "From prev. period" : "Click to change"}</div>
+        {!startLocked && (
+          <input
+            ref={startInputRef}
+            type="date"
+            value={start}
+            onChange={e => onStartChange(e.target.value)}
+            onFocus={() => setStartFocused(true)}
+            onBlur={() => setStartFocused(false)}
+            style={{ position: "absolute", opacity: 0, pointerEvents: "none", width: 0, height: 0 }}
+          />
+        )}
       </div>
 
-      {/* Tile 3: Statement Balance (editable) */}
+      {/* Tile 2: End Date — always editable, triggers date picker */}
+      <div
+        style={{ ...tileBase, border: `1px solid ${endFocused ? "var(--primary)" : "var(--border)"}`, position: "relative", cursor: "pointer", transition: "border-color .15s" }}
+        onClick={() => endInputRef.current?.showPicker()}
+      >
+        <div style={labelStyle}>End Date</div>
+        <div style={valueStyle}>{fmt(end)}</div>
+        <div style={subStyle}>Click to change</div>
+        <input
+          ref={endInputRef}
+          type="date"
+          value={end}
+          onChange={e => onEndChange(e.target.value)}
+          onFocus={() => setEndFocused(true)}
+          onBlur={() => setEndFocused(false)}
+          style={{ position: "absolute", opacity: 0, pointerEvents: "none", width: 0, height: 0 }}
+        />
+      </div>
+
+      {/* Tile 3: Beginning Balance */}
+      <div style={{ ...tileBase, border: "1px solid var(--border)" }}>
+        <div style={labelStyle}>Beginning Balance</div>
+        <div style={valueStyle}>£130,347.28</div>
+        <div style={subStyle}>From prev. reconciliation</div>
+      </div>
+
+      {/* Tile 4: Statement Balance (editable) */}
       <StmtBalanceField value={stmtBal} onChange={onStmtBalChange} />
 
-      {/* Tile 4: Difference (only when statement entered) */}
+      {/* Tile 5: Difference (only when statement entered) */}
       {hasBal && (
         <div style={{
-          flex: 1, padding: "10px 16px",
+          ...tileBase,
           background: diffZero ? "rgba(0,232,157,.04)" : "rgba(255,39,95,.03)",
-          borderRadius: "var(--radius)",
           border: `1px solid ${diffZero ? "rgba(0,232,157,.15)" : "rgba(255,39,95,.12)"}`,
-          boxShadow: "0 1px 3px rgba(0,0,0,.04)",
         }}>
-          <div style={{ fontSize: 10, fontWeight: 600, color: "var(--muted-foreground)", textTransform: "uppercase", letterSpacing: ".06em", marginBottom: 3 }}>Difference</div>
-          <div style={{ fontSize: 17, fontWeight: 700, color: diffZero ? "var(--positive)" : "var(--destructive)", fontVariantNumeric: "tabular-nums" }}>
+          <div style={labelStyle}>Difference</div>
+          <div style={{ ...valueStyle, color: diffZero ? "var(--positive)" : "var(--destructive)" }}>
             {diffZero ? "£0.00" : (diff < 0 ? "−" : "+") + "£" + Math.abs(diff).toLocaleString("en-GB", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
           </div>
-          {diffZero && <div style={{ fontSize: 11, color: "var(--positive)", marginTop: 1 }}>Balanced ✓</div>}
+          {diffZero && <div style={{ ...subStyle, color: "var(--positive)" }}>Balanced ✓</div>}
         </div>
       )}
     </div>
