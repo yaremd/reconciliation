@@ -3,7 +3,7 @@ import {
   Home, ShoppingBag, ShoppingCart, PieChart, Package, Wallet, Users, Settings,
   ChevronRight, ChevronDown, PanelLeft, ArrowLeft, MoreVertical, LogOut,
   Eye, EyeOff, Sun, CreditCard, Layers, Shield, KeyRound, HelpCircle, User, SlidersHorizontal,
-  Pencil, Check, X, Search, Plus, Minus, MoreHorizontal, Filter, Sparkles, Lock,
+  Pencil, Check, X, Search, Plus, Minus, MoreHorizontal, Filter, Sparkles, Lock, Star,
 } from "lucide-react";
 
 // ── Error Boundary ─────────────────────────────────────────────────────────
@@ -172,26 +172,56 @@ function SumRow({ items }) {
   );
 }
 
-// ── Period Combobox ─────────────────────────────────────────────────────────
-// ── Shared Stats Bar (Screen1 + Screen3) ────────────────────────────────────
-function StatsBar({ start, end, onStartChange, onEndChange, stmtBal, onStmtBalChange, startLocked = true }) {
-  const ledgerTotal = 142834.72;
-  const parsed = parseFloat((stmtBal || "").replace(/,/g, ""));
-  const hasBal = stmtBal && !isNaN(parsed);
-  const diff = hasBal ? parsed - ledgerTotal : 0;
-  const diffZero = Math.abs(diff) < 0.01;
-
+// ── Period Selector (inline below account name) ─────────────────────────────
+function PeriodSelector({ periodStart, setPeriodStart, periodEnd, setPeriodEnd }) {
   const endInputRef = useRef(null);
   const [endFocused, setEndFocused] = useState(false);
-  // For unlocked start date editing
-  const startInputRef = useRef(null);
-  const [startFocused, setStartFocused] = useState(false);
 
   function fmt(val) {
     if (!val) return "—";
     const d = new Date(val + "T00:00:00");
     return d.toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" });
   }
+
+  return (
+    <div style={{ display: "flex", alignItems: "center", gap: 6, marginTop: 2 }}>
+      {/* Start date — locked */}
+      <span style={{ fontSize: 13, color: "var(--muted-foreground)", display: "flex", alignItems: "center", gap: 4 }}>
+        <Lock size={10} style={{ color: "var(--muted-foreground)", flexShrink: 0 }} />
+        {fmt(periodStart)}
+      </span>
+      <span style={{ color: "var(--muted-foreground)", fontSize: 13 }}>→</span>
+      {/* End date — editable */}
+      <span
+        onClick={() => endInputRef.current?.showPicker()}
+        style={{
+          fontSize: 13, fontWeight: 600, cursor: "pointer",
+          color: endFocused ? "var(--primary)" : "var(--foreground)",
+          borderBottom: `1px dashed ${endFocused ? "var(--primary)" : "var(--border)"}`,
+          transition: "color .15s, border-color .15s",
+        }}
+      >{fmt(periodEnd)}</span>
+      <input
+        ref={endInputRef}
+        type="date"
+        value={periodEnd}
+        onChange={e => setPeriodEnd(e.target.value)}
+        onFocus={() => setEndFocused(true)}
+        onBlur={() => setEndFocused(false)}
+        style={{ position: "absolute", opacity: 0, pointerEvents: "none", width: 0, height: 0 }}
+      />
+      <span style={{ fontSize: 11, color: "var(--muted-foreground)" }}>· hsbc_q2_2025.csv</span>
+    </div>
+  );
+}
+
+// ── Shared Stats Bar (Screen1 + Screen3) ────────────────────────────────────
+function StatsBar({ stmtBal, onStmtBalChange, debitIn = 0, creditOut = 0 }) {
+  const ledgerTotal = 142834.72;
+  const parsed = parseFloat((stmtBal || "").replace(/,/g, ""));
+  const hasBal = stmtBal && !isNaN(parsed);
+  const diff = hasBal ? parsed - ledgerTotal : 0;
+  const diffZero = Math.abs(diff) < 0.01;
 
   const tileBase = {
     flex: 1, padding: "10px 16px", background: "var(--card)",
@@ -207,56 +237,31 @@ function StatsBar({ start, end, onStartChange, onEndChange, stmtBal, onStmtBalCh
   const subStyle = { fontSize: 11, color: "var(--muted-foreground)", marginTop: 1 };
 
   return (
-    <div style={{ display: "flex", gap: 16, padding: "10px 0" }}>
+    <div style={{ display: "flex", gap: 12, padding: "10px 0" }}>
 
-      {/* Tile 1: Start Date — locked or editable */}
-      <div
-        style={{ ...tileBase, border: `1px solid ${startFocused ? "var(--primary)" : "var(--border)"}`, position: "relative", cursor: startLocked ? "default" : "pointer" }}
-        onClick={() => { if (!startLocked) startInputRef.current?.showPicker(); }}
-      >
-        <div style={{ ...labelStyle, display: "flex", alignItems: "center", gap: 4 }}>
-          Start Date
-          {startLocked && <Lock size={9} style={{ color: "var(--muted-foreground)", flexShrink: 0 }} />}
-        </div>
-        <div style={valueStyle}>{fmt(start)}</div>
-        <div style={subStyle}>{startLocked ? "From prev. period" : "Click to change"}</div>
-        {!startLocked && (
-          <input
-            ref={startInputRef}
-            type="date"
-            value={start}
-            onChange={e => onStartChange(e.target.value)}
-            onFocus={() => setStartFocused(true)}
-            onBlur={() => setStartFocused(false)}
-            style={{ position: "absolute", opacity: 0, pointerEvents: "none", width: 0, height: 0 }}
-          />
-        )}
-      </div>
-
-      {/* Tile 2: End Date — always editable, triggers date picker */}
-      <div
-        style={{ ...tileBase, border: `1px solid ${endFocused ? "var(--primary)" : "var(--border)"}`, position: "relative", cursor: "pointer", transition: "border-color .15s" }}
-        onClick={() => endInputRef.current?.showPicker()}
-      >
-        <div style={labelStyle}>End Date</div>
-        <div style={valueStyle}>{fmt(end)}</div>
-        <div style={subStyle}>Click to change</div>
-        <input
-          ref={endInputRef}
-          type="date"
-          value={end}
-          onChange={e => onEndChange(e.target.value)}
-          onFocus={() => setEndFocused(true)}
-          onBlur={() => setEndFocused(false)}
-          style={{ position: "absolute", opacity: 0, pointerEvents: "none", width: 0, height: 0 }}
-        />
-      </div>
-
-      {/* Tile 3: Beginning Balance */}
+      {/* Tile 1: Beginning Balance */}
       <div style={{ ...tileBase, border: "1px solid var(--border)" }}>
         <div style={labelStyle}>Beginning Balance</div>
         <div style={valueStyle}>£130,347.28</div>
         <div style={subStyle}>From prev. reconciliation</div>
+      </div>
+
+      {/* Tile 2: Debit In */}
+      <div style={{ ...tileBase, border: "1px solid var(--border)" }}>
+        <div style={labelStyle}>Debit In</div>
+        <div style={{ ...valueStyle, color: "var(--positive)" }}>
+          {debitIn > 0 ? "£" + debitIn.toLocaleString("en-GB", { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : "£0.00"}
+        </div>
+        <div style={subStyle}>Credits received</div>
+      </div>
+
+      {/* Tile 3: Credit Out */}
+      <div style={{ ...tileBase, border: "1px solid var(--border)" }}>
+        <div style={labelStyle}>Credit Out</div>
+        <div style={{ ...valueStyle, color: "var(--destructive)" }}>
+          {creditOut > 0 ? "£" + creditOut.toLocaleString("en-GB", { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : "£0.00"}
+        </div>
+        <div style={subStyle}>Debits paid out</div>
       </div>
 
       {/* Tile 4: Statement Balance (editable) */}
@@ -466,57 +471,46 @@ function BalanceBanner({ selL, selR, allItems, onResolve }) {
 }
 
 // ── AI Matching Bridge — two-action model (Change 3) ────────────────────────
-function ConfBox({ item, onAccept, onUpdate, onResolveUpdated, onDismissBoth }) {
-  const confColor = item.conf >= 90 ? "var(--positive)" : item.conf >= 70 ? "var(--warning)" : "var(--destructive)";
-
-  // Build update explanation per anomaly type
-  function updateExplanation(it) {
-    if (it.type === "Date offset") return `Date will be updated from ${it.L?.d} to ${it.R?.d} to match the bank statement.`;
-    if (it.type === "Name variant") return `Name will be updated from "${it.L?.n}" to "${it.R?.n}" to match the bank statement.`;
-    if (it.type === "Amount diff") {
-      const from = it.L ? fmtGbp(it.L.a) : "—";
-      const to   = it.R ? fmtGbp(it.R.a) : "—";
-      return `Amount will be updated from ${from} to ${to}. This will be applied to the ${it.L?.n || "transaction"}.`;
-    }
-    return it.ex || "";
-  }
-
-  // Tooltip shows only AI explanation — no action buttons
-  const tooltipContent = (
+function ConfBox({ item, onAccept, onDismissBoth }) {
+  // Tooltip shows AI explanation
+  const tooltipContent = item.ex ? (
     <div style={{ fontSize: 12, maxWidth: 230, lineHeight: 1.5 }}>
       <div style={{ fontSize: 10, fontWeight: 600, opacity: .6, marginBottom: 5, textTransform: "uppercase", letterSpacing: ".05em" }}>AI Analysis</div>
-      <div style={{ marginBottom: 8 }}>{item.ex}</div>
-      <div style={{ fontSize: 10, opacity: .6 }}>
-        <strong>Accept</strong> — keep as-is &nbsp;·&nbsp; <strong>Update</strong> — apply AI suggestion
-      </div>
+      <div>{item.ex}</div>
     </div>
-  );
+  ) : null;
 
-  // Updated state — show changed values + Resolve button
-  if (item._updated) {
+  // One-to-many: 1 bank → many ledger entries, Accept only
+  if (item.type === "one-to-many") {
     return (
       <div style={{
         width: "100%", padding: "10px", borderRadius: "calc(var(--radius) + 4px)",
-        border: "1px solid rgba(0,120,255,.3)", background: "rgba(0,120,255,.04)",
+        border: "1px solid rgba(0,120,255,.25)", background: "rgba(0,120,255,.03)",
         display: "flex", flexDirection: "column", gap: 8, boxSizing: "border-box",
       }}>
-        <div style={{ fontSize: 11, fontWeight: 600, color: "var(--primary)", textAlign: "center" }}>✓ Updated</div>
-        <div style={{ fontSize: 11, color: "var(--muted-foreground)", textAlign: "center", lineHeight: 1.4 }}>{updateExplanation(item)}</div>
-        <button onClick={e => { e.stopPropagation(); onResolveUpdated(item); }} style={{
-          width: "100%", padding: "5px 8px", background: "var(--primary)",
-          color: "#fff", border: "none",
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 4, color: "var(--primary)" }}>
+            <Star size={10} style={{ fill: "var(--primary)", stroke: "none", flexShrink: 0 }} />
+            <span style={{ fontSize: 10, fontWeight: 600 }}>AI Suggested</span>
+          </div>
+          <Badge v="neutral" xs>1 → many</Badge>
+        </div>
+        {item.ex && <div style={{ fontSize: 10, color: "var(--muted-foreground)", lineHeight: 1.4, textAlign: "center" }}>{item.ex}</div>}
+        <button onClick={e => { e.stopPropagation(); onAccept(item); }} style={{
+          width: "100%", padding: "5px 6px", background: "rgba(0,232,157,.12)",
+          color: "#00AD68", border: "1px solid rgba(0,232,157,.4)",
           borderRadius: "var(--radius)", fontSize: 11, fontWeight: 600, cursor: "pointer",
-          display: "flex", alignItems: "center", justifyContent: "center", gap: 4,
-          transition: "opacity .15s",
+          display: "flex", alignItems: "center", justifyContent: "center", gap: 3,
+          transition: "background .15s",
         }}
-          onMouseEnter={e => e.currentTarget.style.opacity = ".88"}
-          onMouseLeave={e => e.currentTarget.style.opacity = "1"}
-        ><Check size={11} /> Resolve</button>
+          onMouseEnter={e => e.currentTarget.style.background = "rgba(0,232,157,.22)"}
+          onMouseLeave={e => e.currentTarget.style.background = "rgba(0,232,157,.12)"}
+        ><Check size={10} /> Accept</button>
       </div>
     );
   }
 
-  // TASK-03: Duplicate — N competing ledger candidates for one statement entry
+  // Duplicate — N competing ledger candidates for one statement entry
   if (item.type === "Duplicate") {
     const candidates = item.candidates || [item.L];
     const dupTooltip = (
@@ -565,46 +559,36 @@ function ConfBox({ item, onAccept, onUpdate, onResolveUpdated, onDismissBoth }) 
     );
   }
 
-  // Normal AI anomaly — buttons always visible in the box, tooltip shows explanation only
-  return (
-    <Tooltip content={tooltipContent}>
-      <div style={{
-        width: "100%", padding: "10px", borderRadius: "calc(var(--radius) + 4px)",
-        border: "1px solid var(--border)", background: "var(--muted)",
-        display: "flex", flexDirection: "column", gap: 8, boxSizing: "border-box",
-        cursor: "default",
-      }}>
-        {/* % left · type badge right — no progress bar */}
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-          <span style={{ fontSize: 13, fontWeight: 700, color: confColor }}>{item.conf}%</span>
-          <Badge v={item.conf >= 80 ? "warning" : "critical"} xs>{item.type}</Badge>
+  // Normal AI anomaly — Accept only, tooltip shows explanation
+  const inner = (
+    <div style={{
+      width: "100%", padding: "10px", borderRadius: "calc(var(--radius) + 4px)",
+      border: "1px solid var(--border)", background: "var(--muted)",
+      display: "flex", flexDirection: "column", gap: 8, boxSizing: "border-box",
+      cursor: "default",
+    }}>
+      {/* AI suggested label left · type badge right */}
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 4, color: "var(--primary)" }}>
+          <Star size={10} style={{ fill: "var(--primary)", stroke: "none", flexShrink: 0 }} />
+          <span style={{ fontSize: 10, fontWeight: 600 }}>AI Suggested</span>
         </div>
-        {/* Action buttons always in the box */}
-        <div style={{ display: "flex", gap: 5 }}>
-          <button onClick={e => { e.stopPropagation(); onAccept(item); }} style={{
-            flex: 1, padding: "5px 4px", background: "rgba(0,232,157,.12)",
-            color: "#00AD68", border: "1px solid rgba(0,232,157,.4)",
-            borderRadius: "var(--radius)", fontSize: 11, fontWeight: 600, cursor: "pointer",
-            display: "flex", alignItems: "center", justifyContent: "center", gap: 3,
-            transition: "background .15s",
-          }}
-            onMouseEnter={e => e.currentTarget.style.background = "rgba(0,232,157,.22)"}
-            onMouseLeave={e => e.currentTarget.style.background = "rgba(0,232,157,.12)"}
-          ><Check size={10} /> Accept</button>
-          <button onClick={e => { e.stopPropagation(); onUpdate(item); }} style={{
-            flex: 1, padding: "5px 4px", background: "rgba(0,120,255,.08)",
-            color: "var(--primary)", border: "1px solid rgba(0,120,255,.35)",
-            borderRadius: "var(--radius)", fontSize: 11, fontWeight: 600, cursor: "pointer",
-            display: "flex", alignItems: "center", justifyContent: "center", gap: 3,
-            transition: "background .15s",
-          }}
-            onMouseEnter={e => e.currentTarget.style.background = "rgba(0,120,255,.16)"}
-            onMouseLeave={e => e.currentTarget.style.background = "rgba(0,120,255,.08)"}
-          ><ChevronRight size={10} /> Update</button>
-        </div>
+        <Badge v="neutral" xs>{item.type}</Badge>
       </div>
-    </Tooltip>
+      {/* Accept button */}
+      <button onClick={e => { e.stopPropagation(); onAccept(item); }} style={{
+        width: "100%", padding: "5px 4px", background: "rgba(0,232,157,.12)",
+        color: "#00AD68", border: "1px solid rgba(0,232,157,.4)",
+        borderRadius: "var(--radius)", fontSize: 11, fontWeight: 600, cursor: "pointer",
+        display: "flex", alignItems: "center", justifyContent: "center", gap: 3,
+        transition: "background .15s",
+      }}
+        onMouseEnter={e => e.currentTarget.style.background = "rgba(0,232,157,.22)"}
+        onMouseLeave={e => e.currentTarget.style.background = "rgba(0,232,157,.12)"}
+      ><Check size={10} /> Accept</button>
+    </div>
   );
+  return tooltipContent ? <Tooltip content={tooltipContent}>{inner}</Tooltip> : inner;
 }
 
 // ── Ledger / Statement Items ───────────────────────────────────────────────
@@ -733,9 +717,18 @@ function SecHdr({ icon, color, title, itemCount, totalAmt, open, onToggle }) {
 // ── DATA ───────────────────────────────────────────────────────────────────
 const INIT_ATTENTION = [
   { id:"a1", L:{ d:"28 Jun", n:"WIRE TRF – ACME CORP", a:12500, cat:"Sales Revenue" }, R:{ d:"29 Jun", n:"ACME CORP WIRE", a:12500 }, conf:88, type:"Date offset", ex:"Same transaction, 1-day date offset. Fiskl: 28 Jun, Statement: 29 Jun. Amounts match exactly.", at:"accept", aiSuggested:true },
-  { id:"a2", L:{ d:"26 Jun", n:"STRIPE PAYOUT", a:8943.22, cat:"Payment Processing" }, R:{ d:"26 Jun", n:"STRIPE PAYMENTS UK", a:9000 }, conf:82, type:"Amount diff", ex:"Gross vs net payout. £56.78 = Stripe processing fee.", at:"accept", aiSuggested:true },
   { id:"a3", L:{ d:"25 Jun", n:"PAYMENT – SMITH & CO", a:-3200, cat:"Supplier Payments" }, R:{ d:"25 Jun", n:"SMITH AND COMPANY LTD", a:-3200 }, conf:92, type:"Name variant", ex:"Same legal entity — abbreviated name in ledger vs full registered name on statement.", at:"accept", aiSuggested:true },
-  { id:"a4", L:{ d:"24 Jun", n:"DD – HMRC VAT Q2", a:-4812, cat:"Tax Payments" }, R:{ d:"24 Jun", n:"HMRC VAT", a:-4812.5 }, conf:68, type:"Amount diff", ex:"50p rounding difference. Likely a currency rounding issue on HMRC's side.", at:"review", aiSuggested:true },
+  { id:"otm1",
+    type:"one-to-many",
+    ledgerItems:[
+      { d:"15 Jun", n:"CLIENT PMT – PARTIAL 1", a:3000, cat:"Sales Revenue" },
+      { d:"18 Jun", n:"CLIENT PMT – PARTIAL 2", a:2000, cat:"Sales Revenue" },
+      { d:"20 Jun", n:"CLIENT PMT – FINAL",    a:1500, cat:"Sales Revenue" },
+    ],
+    L:null,
+    R:{ d:"20 Jun", n:"CLIENT PAYMENT – INVOICE 1001", a:6500 },
+    conf:91, ex:"3 ledger partial payments total £6,500 matching one bank statement payment.", at:"accept", aiSuggested:true },
+  { id:"mb1", type:"missing-in-bank", L:{ d:"22 Jun", n:"CONSULTING FEE – PROJECT X", a:5000, cat:"Services Revenue" }, R:null, conf:null, ex:null, at:null, aiSuggested:false },
   { id:"dup1",
     candidates:[
       { d:"27 Jun", n:"STRIPE PAYOUT",          a:8943.22, cat:"Payment Processing" },
@@ -769,6 +762,40 @@ const LEDGER = [
   { id:"l7", d:"26 Jun", n:"CARD – AWS", a:-487.32, cat:"Software", st:"reconciled" },
   { id:"l8", d:"25 Jun", n:"BACS – PAYROLL", a:-34200, cat:"Payroll", st:"reconciled" },
   { id:"l9", d:"24 Jun", n:"INSURANCE", a:-890, cat:"Insurance", st:"reconciled" },
+];
+
+// ── TRANSACTIONS (Screen 1 — Period selected table view) ─────────────────
+const TRANSACTIONS = [
+  { id:"t1",  d:"18/07/2025", n:"Bill Pacific Electric",        aiConf:97,   cat:"Utilities - Electricity",  catType:null,      isManual:false, tax:10,   amount:-200,       currency:"EUR", amountGbp:-170.98,    hasLink:false, extraCats:0 },
+  { id:"t2",  d:"17/07/2025", n:"Stripe Payment",               aiConf:59,   cat:"Invoice-Payment-INV-021",  catType:null,      isManual:false, tax:null, amount:14441,      currency:"EUR", amountGbp:12597.25,   hasLink:true,  extraCats:0 },
+  { id:"t3",  d:"17/07/2025", n:"Q3 Campaign Services",         aiConf:94,   cat:"Invoice-Payment-INV-019",  catType:null,      isManual:true,  tax:10,   amount:2000,       currency:"EUR", amountGbp:1715.84,    hasLink:true,  extraCats:0 },
+  { id:"t4",  d:"16/07/2025", n:"Stationery & Print Materials", aiConf:null, cat:"Uncategorized Expense",    catType:"expense", isManual:false, tax:null, amount:-200,       currency:"EUR", amountGbp:-170.98,    hasLink:false, extraCats:0 },
+  { id:"t5",  d:"15/07/2025", n:"Microsoft Enterprise Annual",  aiConf:98,   cat:"Accounts Payable",         catType:null,      isManual:false, tax:null, amount:-19087,     currency:"EUR", amountGbp:-15927.77,  hasLink:true,  extraCats:0 },
+  { id:"t6",  d:"12/07/2025", n:"Facility Management Services", aiConf:null, cat:"Office Utilities",         catType:null,      isManual:true,  tax:null, amount:-322,       currency:"EUR", amountGbp:-267.84,    hasLink:false, extraCats:0 },
+  { id:"t7",  d:"11/07/2025", n:"Contract & Compliance Review", aiConf:null, cat:"Uncategorized Income",     catType:"income",  isManual:false, tax:null, amount:5500,       currency:"EUR", amountGbp:4727.00,    hasLink:false, extraCats:0 },
+  { id:"t8",  d:"11/07/2025", n:"Document Delivery Services",   aiConf:83,   cat:"Accounts Payable",         catType:null,      isManual:false, tax:null, amount:-93.92,     currency:"EUR", amountGbp:-82.48,     hasLink:true,  extraCats:0 },
+  { id:"t9",  d:"10/07/2025", n:"Conference Room Technology",   aiConf:null, cat:"Equipment Purchase",       catType:null,      isManual:false, tax:null, amount:-4000,      currency:"EUR", amountGbp:-3518.65,   hasLink:false, extraCats:2 },
+  { id:"t10", d:"08/07/2025", n:"Internal Transfer",            aiConf:95,   cat:"Revolut - EUR",            catType:null,      isManual:false, tax:null, amount:-200,       currency:"EUR", amountGbp:-170.98,    hasLink:true,  extraCats:0 },
+  { id:"t11", d:"07/07/2025", n:"WIRE TRF – ACME CORP",         aiConf:88,   cat:"Sales Revenue",            catType:null,      isManual:false, tax:20,   amount:12500,      currency:"EUR", amountGbp:10731.50,   hasLink:false, extraCats:0 },
+  { id:"t12", d:"06/07/2025", n:"STRIPE PAYOUT",                aiConf:76,   cat:"Payment Processing",       catType:null,      isManual:false, tax:null, amount:8943.22,    currency:"EUR", amountGbp:7678.06,    hasLink:true,  extraCats:0 },
+  { id:"t13", d:"05/07/2025", n:"PAYMENT – SMITH & CO",         aiConf:92,   cat:"Supplier Payments",        catType:null,      isManual:false, tax:null, amount:-3200,      currency:"EUR", amountGbp:-2746.24,   hasLink:true,  extraCats:0 },
+  { id:"t14", d:"04/07/2025", n:"DD – HMRC VAT Q2",             aiConf:null, cat:"Tax Payments",             catType:null,      isManual:false, tax:null, amount:-4812,      currency:"GBP", amountGbp:-4812.00,   hasLink:false, extraCats:0 },
+  { id:"t15", d:"03/07/2025", n:"Cloud Hosting – AWS June",     aiConf:99,   cat:"Software & Subscriptions", catType:null,      isManual:false, tax:20,   amount:-487.32,    currency:"USD", amountGbp:-389.86,    hasLink:false, extraCats:0 },
+  { id:"t16", d:"02/07/2025", n:"BACS – PAYROLL June",          aiConf:99,   cat:"Payroll",                  catType:null,      isManual:false, tax:null, amount:-34200,     currency:"GBP", amountGbp:-34200.00,  hasLink:false, extraCats:0 },
+  { id:"t17", d:"01/07/2025", n:"Office Insurance Premium",     aiConf:97,   cat:"Insurance",                catType:null,      isManual:false, tax:null, amount:-890,       currency:"GBP", amountGbp:-890.00,    hasLink:false, extraCats:0 },
+  { id:"t18", d:"30/06/2025", n:"FASTER PYMT – CLIENT ABC",     aiConf:99,   cat:"Sales Revenue",            catType:null,      isManual:false, tax:20,   amount:5000,       currency:"GBP", amountGbp:5000.00,    hasLink:true,  extraCats:0 },
+  { id:"t19", d:"29/06/2025", n:"Consulting Fee – Project X",   aiConf:null, cat:"Uncategorized Income",     catType:"income",  isManual:false, tax:null, amount:5000,       currency:"GBP", amountGbp:5000.00,    hasLink:false, extraCats:0 },
+  { id:"t20", d:"28/06/2025", n:"Marketing Agency Retainer",    aiConf:85,   cat:"Marketing",                catType:null,      isManual:true,  tax:20,   amount:-2500,      currency:"EUR", amountGbp:-2145.75,   hasLink:false, extraCats:0 },
+  { id:"t21", d:"27/06/2025", n:"DD – OFFICE RENT",             aiConf:99,   cat:"Rent & Utilities",         catType:null,      isManual:false, tax:null, amount:-2400,      currency:"GBP", amountGbp:-2400.00,   hasLink:false, extraCats:0 },
+  { id:"t22", d:"26/06/2025", n:"CARD – AWS Infrastructure",    aiConf:98,   cat:"Software & Subscriptions", catType:null,      isManual:false, tax:20,   amount:-487.32,    currency:"GBP", amountGbp:-487.32,    hasLink:false, extraCats:0 },
+  { id:"t23", d:"25/06/2025", n:"Travel Expenses – Berlin",     aiConf:null, cat:"Uncategorized Expense",    catType:"expense", isManual:false, tax:null, amount:-1240,      currency:"EUR", amountGbp:-1064.42,   hasLink:false, extraCats:0 },
+  { id:"t24", d:"24/06/2025", n:"Equipment Lease Payment",      aiConf:91,   cat:"Equipment Purchase",       catType:null,      isManual:false, tax:20,   amount:-650,       currency:"GBP", amountGbp:-650.00,    hasLink:true,  extraCats:1 },
+  { id:"t25", d:"23/06/2025", n:"Software Licence – Annual",    aiConf:96,   cat:"Software & Subscriptions", catType:null,      isManual:false, tax:20,   amount:-3600,      currency:"GBP", amountGbp:-3600.00,   hasLink:false, extraCats:0 },
+  { id:"t26", d:"22/06/2025", n:"Client Deposit – INV-099",     aiConf:88,   cat:"Sales Revenue",            catType:null,      isManual:true,  tax:20,   amount:8000,       currency:"EUR", amountGbp:6867.20,    hasLink:true,  extraCats:0 },
+  { id:"t27", d:"20/06/2025", n:"Bank Service Charge",          aiConf:null, cat:"Bank Fees",                catType:null,      isManual:false, tax:null, amount:-35,        currency:"GBP", amountGbp:-35.00,     hasLink:false, extraCats:0 },
+  { id:"t28", d:"19/06/2025", n:"Card Machine Rental",          aiConf:null, cat:"Uncategorized Expense",    catType:"expense", isManual:false, tax:20,   amount:-15,        currency:"GBP", amountGbp:-15.00,     hasLink:false, extraCats:0 },
+  { id:"t29", d:"18/06/2025", n:"Fuel & Transport",             aiConf:79,   cat:"Travel & Transport",       catType:null,      isManual:false, tax:5,    amount:-180,       currency:"GBP", amountGbp:-180.00,    hasLink:false, extraCats:0 },
+  { id:"t30", d:"16/06/2025", n:"Workspace Subscription",       aiConf:97,   cat:"Rent & Utilities",         catType:null,      isManual:false, tax:20,   amount:-299,       currency:"GBP", amountGbp:-299.00,    hasLink:false, extraCats:0 },
 ];
 
 // ── ACCOUNTS DATA (Screen 0) ──────────────────────────────────────────────
@@ -1414,20 +1441,245 @@ function Screen05({ account, go }) {
   );
 }
 
+function CreateTxModal({ direction, onSave, onClose }) {
+  const today = new Date().toISOString().slice(0, 10);
+  const [form, setForm] = useState({
+    n: "", d: today, amount: "", currency: "GBP", cat: "", tax: "",
+  });
+  function upd(k, v) { setForm(p => ({ ...p, [k]: v })); }
+  const isIn = direction === "in";
+
+  const inputStyle = {
+    width: "100%", padding: "8px 10px",
+    border: "1px solid var(--input)", borderRadius: "var(--radius)",
+    fontSize: 13, color: "var(--foreground)", background: "var(--background)",
+    outline: "none", boxSizing: "border-box", transition: "border-color .15s",
+  };
+  const labelStyle = {
+    display: "block", fontSize: 11, fontWeight: 600, color: "var(--muted-foreground)",
+    marginBottom: 4, textTransform: "uppercase", letterSpacing: ".04em",
+  };
+
+  return (
+    <div style={{
+      position: "fixed", inset: 0, zIndex: 400,
+      background: "rgba(0,0,0,.4)", backdropFilter: "blur(2px)",
+      display: "flex", alignItems: "center", justifyContent: "center",
+    }} onClick={onClose}>
+      <Crd style={{ width: 440, padding: 28, boxShadow: "0 20px 60px rgba(0,0,0,.2)" }} onClick={e => e.stopPropagation()}>
+        {/* Header */}
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+            <div style={{
+              width: 28, height: 28, borderRadius: 8, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0,
+              background: isIn ? "rgba(0,232,157,.12)" : "rgba(255,39,95,.08)",
+              border: `1px solid ${isIn ? "rgba(0,232,157,.35)" : "rgba(255,39,95,.25)"}`,
+              color: isIn ? "var(--positive)" : "var(--destructive)",
+            }}>
+              {isIn ? <Plus size={14} /> : <Minus size={14} />}
+            </div>
+            <h2 style={{ margin: 0, fontSize: 16, fontWeight: 700, color: "var(--foreground)" }}>
+              New {isIn ? "Income" : "Expense"}
+            </h2>
+          </div>
+          <button onClick={onClose} style={{
+            background: "transparent", border: "1px solid var(--border)",
+            borderRadius: "var(--radius)", padding: 4, cursor: "pointer",
+            color: "var(--muted-foreground)", display: "flex", alignItems: "center",
+            transition: "background .15s",
+          }}
+            onMouseEnter={e => e.currentTarget.style.background = "var(--accent)"}
+            onMouseLeave={e => e.currentTarget.style.background = "transparent"}
+          ><X size={14} /></button>
+        </div>
+
+        {/* Fields */}
+        <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+          <div>
+            <label style={labelStyle}>Description</label>
+            <input
+              autoFocus
+              placeholder="e.g. Office supplies"
+              value={form.n} onChange={e => upd("n", e.target.value)}
+              style={inputStyle}
+              onFocus={e => e.target.style.borderColor = "var(--primary)"}
+              onBlur={e => e.target.style.borderColor = "var(--input)"}
+            />
+          </div>
+          <div style={{ display: "flex", gap: 12 }}>
+            <div style={{ flex: 1 }}>
+              <label style={labelStyle}>Date</label>
+              <input type="date" value={form.d} onChange={e => upd("d", e.target.value)}
+                style={inputStyle}
+                onFocus={e => e.target.style.borderColor = "var(--primary)"}
+                onBlur={e => e.target.style.borderColor = "var(--input)"}
+              />
+            </div>
+            <div style={{ flex: 1 }}>
+              <label style={labelStyle}>Currency</label>
+              <select value={form.currency} onChange={e => upd("currency", e.target.value)}
+                style={{ ...inputStyle, cursor: "pointer" }}
+              >
+                {["GBP", "EUR", "USD"].map(c => <option key={c}>{c}</option>)}
+              </select>
+            </div>
+          </div>
+          <div>
+            <label style={labelStyle}>Amount</label>
+            <div style={{ position: "relative", display: "flex", alignItems: "center" }}>
+              <span style={{
+                position: "absolute", left: 10, fontSize: 13, fontWeight: 500,
+                color: "var(--muted-foreground)", userSelect: "none",
+              }}>
+                {{ GBP: "£", EUR: "€", USD: "$" }[form.currency]}
+              </span>
+              <input
+                type="number" min="0" step="0.01"
+                placeholder="0.00"
+                value={form.amount} onChange={e => upd("amount", e.target.value)}
+                style={{ ...inputStyle, paddingLeft: 24 }}
+                onFocus={e => e.target.style.borderColor = "var(--primary)"}
+                onBlur={e => e.target.style.borderColor = "var(--input)"}
+              />
+            </div>
+          </div>
+          <div style={{ display: "flex", gap: 12 }}>
+            <div style={{ flex: 1 }}>
+              <label style={labelStyle}>Category</label>
+              <input
+                placeholder="e.g. Sales Revenue"
+                value={form.cat} onChange={e => upd("cat", e.target.value)}
+                style={inputStyle}
+                onFocus={e => e.target.style.borderColor = "var(--primary)"}
+                onBlur={e => e.target.style.borderColor = "var(--input)"}
+              />
+            </div>
+            <div style={{ width: 90 }}>
+              <label style={labelStyle}>Tax %</label>
+              <input
+                type="number" min="0" max="100" placeholder="0"
+                value={form.tax} onChange={e => upd("tax", e.target.value)}
+                style={inputStyle}
+                onFocus={e => e.target.style.borderColor = "var(--primary)"}
+                onBlur={e => e.target.style.borderColor = "var(--input)"}
+              />
+            </div>
+          </div>
+        </div>
+
+        {/* Actions */}
+        <div style={{ display: "flex", gap: 8, marginTop: 22 }}>
+          <Btn outline sm onClick={onClose}>Cancel</Btn>
+          <Btn grad sm onClick={() => {
+            if (!form.n || !form.amount) return;
+            const rawAmt = parseFloat(form.amount) || 0;
+            onSave({
+              n: form.n, d: form.d, currency: form.currency,
+              amount: isIn ? rawAmt : -rawAmt,
+              cat: form.cat || (isIn ? "Uncategorized Income" : "Uncategorized Expense"),
+              catType: form.cat ? null : (isIn ? "income" : "expense"),
+              tax: form.tax ? parseFloat(form.tax) : null,
+            });
+            onClose();
+          }}>
+            Add {isIn ? "Income" : "Expense"}
+          </Btn>
+        </div>
+      </Crd>
+    </div>
+  );
+}
+
 function Screen1({ go }) {
-  const [ec, setEc] = useState(null);
+  const [search, setSearch] = useState("");
+  const [createModal, setCreateModal] = useState(null); // null | "in" | "out"
+  const [selectedRows, setSelectedRows] = useState(new Set());
+  const [page, setPage] = useState(1);
+  const [rowsPerPage, setRowsPerPage] = useState(10);
   const [stmtBal, setStmtBal] = useState("");
   const [periodStart, setPeriodStart] = useState("2025-04-01");
   const [periodEnd, setPeriodEnd] = useState("2025-06-30");
+  const [transactions, setTransactions] = useState(TRANSACTIONS);
+
+  const filtered = transactions.filter(tx => {
+    if (search) {
+      const q = search.toLowerCase();
+      if (!tx.n.toLowerCase().includes(q) && !(tx.cat || "").toLowerCase().includes(q)) return false;
+    }
+    return true;
+  });
+
+  const totalPages = Math.max(1, Math.ceil(filtered.length / rowsPerPage));
+  const safePage = Math.min(page, totalPages);
+  const pageRows = filtered.slice((safePage - 1) * rowsPerPage, safePage * rowsPerPage);
+  const allChecked = pageRows.length > 0 && pageRows.every(r => selectedRows.has(r.id));
+  const someChecked = pageRows.some(r => selectedRows.has(r.id));
+
+  function toggleAll() {
+    setSelectedRows(prev => {
+      const next = new Set(prev);
+      if (allChecked) pageRows.forEach(r => next.delete(r.id));
+      else pageRows.forEach(r => next.add(r.id));
+      return next;
+    });
+  }
+
+  function toggleRow(id) {
+    setSelectedRows(prev => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id); else next.add(id);
+      return next;
+    });
+  }
+
+  function fmtAmt(amount, currency) {
+    if (amount == null) return "—";
+    const sym = { GBP: "£", EUR: "€", USD: "$" }[currency] || "";
+    const abs = Math.abs(amount).toLocaleString("en-GB", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    return (amount < 0 ? "-" : "") + sym + abs;
+  }
+
+  function aiColor(conf) {
+    if (conf >= 90) return "var(--positive)";
+    if (conf >= 70) return "#E8A000";
+    return "var(--destructive)";
+  }
+
+  // Pagination page numbers (show up to 5 page buttons with ellipsis)
+  function pageButtons() {
+    if (totalPages <= 5) return Array.from({ length: totalPages }, (_, i) => i + 1);
+    if (safePage <= 3) return [1, 2, 3, "…", totalPages];
+    if (safePage >= totalPages - 2) return [1, "…", totalPages - 2, totalPages - 1, totalPages];
+    return [1, "…", safePage, "…", totalPages];
+  }
+
+  const thStyle = {
+    padding: "10px 14px", textAlign: "left",
+    fontSize: 11, fontWeight: 600, color: "var(--muted-foreground)",
+    textTransform: "uppercase", letterSpacing: ".05em",
+    borderBottom: "1px solid var(--border)",
+    whiteSpace: "nowrap", userSelect: "none",
+    background: "var(--background)",
+  };
+  const tdStyle = {
+    padding: "10px 14px", borderBottom: "1px solid var(--border)",
+    fontSize: 13, color: "var(--foreground)", verticalAlign: "middle",
+  };
+  const numStyle = { fontVariantNumeric: "tabular-nums", fontFeatureSettings: "'tnum'", whiteSpace: "nowrap" };
+
   return (
     <div>
+      {/* Page header */}
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 20 }}>
         <div>
-          <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 6 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 4 }}>
             <h1 style={{ fontSize: 20, fontWeight: 700, color: "var(--foreground)", margin: 0 }}>HSBC Current Account</h1>
             <Badge v="warning">Draft</Badge>
           </div>
-          <div style={{ fontSize: 13, color: "var(--muted-foreground)" }}>{LEDGER.length} transactions</div>
+          <PeriodSelector
+            periodStart={periodStart} setPeriodStart={setPeriodStart}
+            periodEnd={periodEnd} setPeriodEnd={setPeriodEnd}
+          />
         </div>
         <div style={{ display: "flex", gap: 8 }}>
           <Btn outline sm onClick={go}>↑ Upload Statement</Btn>
@@ -1435,53 +1687,320 @@ function Screen1({ go }) {
         </div>
       </div>
 
-      <StatsBar
-        start={periodStart} end={periodEnd}
-        onStartChange={setPeriodStart} onEndChange={setPeriodEnd}
-        stmtBal={stmtBal} onStmtBalChange={setStmtBal}
-      />
+      <StatsBar stmtBal={stmtBal} onStmtBalChange={setStmtBal} />
 
-      {/* Filter row */}
-      <div style={{ display: "flex", alignItems: "center", gap: 8, margin: "12px 0" }}>
-        <input placeholder="Search…" style={{
-          flex: 1, maxWidth: 220, padding: "6px 10px",
-          border: "1px solid var(--border)", borderRadius: "var(--radius)",
-          fontSize: 13, color: "var(--foreground)", background: "var(--background)", outline: "none",
-        }} />
-        <select style={{ padding: "6px 10px", border: "1px solid var(--border)", borderRadius: "var(--radius)", fontSize: 13, color: "var(--muted-foreground)", background: "var(--background)", cursor: "pointer", outline: "none" }}>
-          <option>Category ▾</option>
-        </select>
-        <select style={{ padding: "6px 10px", border: "1px solid var(--border)", borderRadius: "var(--radius)", fontSize: 13, color: "var(--muted-foreground)", background: "var(--background)", cursor: "pointer", outline: "none" }}>
-          <option>Status ▾</option>
-        </select>
-      </div>
-      <Crd style={{ marginTop: 12 }}>
-        <table style={{ width: "100%", borderCollapse: "collapse" }}>
-          <thead>
-            <tr style={{ borderBottom: "1px solid var(--border)" }}>
-              {["Date","Description","Category","Amount","Status"].map((h, i) => (
-                <th key={i} style={{ padding: "8px 14px", textAlign: i === 3 ? "right" : "left", fontSize: 10, fontWeight: 600, color: "var(--muted-foreground)", textTransform: "uppercase", letterSpacing: ".04em" }}>{h}</th>
-              ))}
-            </tr>
-          </thead>
-          <tbody>
-            {LEDGER.map(tx => (
-              <tr key={tx.id} style={{ borderBottom: "1px solid var(--border)" }}>
-                <td style={{ padding: "10px 14px", color: "var(--muted-foreground)", fontSize: 12 }}>{tx.d}</td>
-                <td style={{ padding: "10px 14px", fontWeight: 500, color: "var(--foreground)", fontSize: 13 }}>{tx.n}</td>
-                <td style={{ padding: "10px 14px" }}>
-                  {ec === tx.id
-                    ? <input autoFocus defaultValue={tx.cat} onBlur={() => setEc(null)} onKeyDown={e => e.key === "Enter" && e.target.blur()} style={{ padding: "3px 6px", border: "1px solid var(--primary)", borderRadius: "var(--radius)", fontSize: 12, outline: "none", background: "var(--background)", color: "var(--foreground)" }} />
-                    : <span style={{ fontSize: 12, color: "var(--muted-foreground)", cursor: "pointer" }} onClick={() => setEc(tx.id)}>{tx.cat} ✎</span>
-                  }
-                </td>
-                <td style={{ padding: "10px 14px", textAlign: "right" }}><Amt a={tx.a} /></td>
-                <td style={{ padding: "10px 14px" }}><Badge v={tx.st === "reconciled" ? "positive" : "warning"}>{tx.st === "reconciled" ? "Reconciled" : "Unreconciled"}</Badge></td>
+      {/* Table card */}
+      <Crd style={{ marginTop: 16, overflow: "hidden" }}>
+
+        {/* Toolbar */}
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "12px 16px", borderBottom: "1px solid var(--border)" }}>
+          {/* Search */}
+          <div style={{ position: "relative", display: "flex", alignItems: "center" }}>
+            <Search size={14} style={{ position: "absolute", left: 10, color: "var(--muted-foreground)", pointerEvents: "none", zIndex: 1 }} />
+            <input
+              placeholder="Search..."
+              value={search}
+              onChange={e => { setSearch(e.target.value); setPage(1); }}
+              style={{
+                paddingLeft: 32, paddingRight: 10, paddingTop: 7, paddingBottom: 7,
+                border: "1px solid var(--border)", borderRadius: "var(--radius)",
+                fontSize: 13, color: "var(--foreground)", background: "var(--background)",
+                outline: "none", width: 220, transition: "border-color .15s",
+              }}
+              onFocus={e => e.target.style.borderColor = "var(--primary)"}
+              onBlur={e => e.target.style.borderColor = "var(--border)"}
+            />
+          </div>
+
+          {/* + IN / – OUT create buttons */}
+          <div style={{ display: "flex", gap: 8 }}>
+            <button
+              onClick={() => setCreateModal("in")}
+              style={{
+                display: "inline-flex", alignItems: "center", gap: 5,
+                padding: "6px 14px", background: "transparent",
+                color: "var(--foreground)", border: "1px solid var(--border)",
+                borderRadius: "var(--radius)", fontSize: 13, fontWeight: 500,
+                cursor: "pointer", transition: "background .15s",
+              }}
+              onMouseEnter={e => e.currentTarget.style.background = "var(--accent)"}
+              onMouseLeave={e => e.currentTarget.style.background = "transparent"}
+            >
+              <Plus size={13} /> IN
+            </button>
+            <button
+              onClick={() => setCreateModal("out")}
+              style={{
+                display: "inline-flex", alignItems: "center", gap: 5,
+                padding: "6px 14px", background: "transparent",
+                color: "var(--foreground)", border: "1px solid var(--border)",
+                borderRadius: "var(--radius)", fontSize: 13, fontWeight: 500,
+                cursor: "pointer", transition: "background .15s",
+              }}
+              onMouseEnter={e => e.currentTarget.style.background = "var(--accent)"}
+              onMouseLeave={e => e.currentTarget.style.background = "transparent"}
+            >
+              <Minus size={13} /> OUT
+            </button>
+          </div>
+        </div>
+
+        {/* Table */}
+        <div style={{ overflowX: "auto" }}>
+          <table style={{ width: "100%", borderCollapse: "collapse", tableLayout: "fixed" }}>
+            <colgroup>
+              <col style={{ width: 44 }} />
+              <col style={{ width: 110 }} />
+              <col style={{ width: "20%" }} />
+              <col style={{ width: "35%" }} />
+              <col style={{ width: 70 }} />
+              <col style={{ width: 130 }} />
+              <col style={{ width: 130 }} />
+              <col style={{ width: 44 }} />
+            </colgroup>
+            <thead>
+              <tr>
+                <th style={{ ...thStyle, textAlign: "center", padding: "10px 8px" }}>
+                  <input
+                    type="checkbox"
+                    checked={allChecked}
+                    ref={el => { if (el) el.indeterminate = someChecked && !allChecked; }}
+                    onChange={toggleAll}
+                    style={{ accentColor: "var(--primary)", cursor: "pointer" }}
+                  />
+                </th>
+                <th style={thStyle}>DATE</th>
+                <th style={thStyle}>NAME</th>
+                <th style={thStyle}>
+                  <span style={{ display: "inline-flex", alignItems: "center", gap: 5 }}>
+                    <Sparkles size={12} style={{ color: "var(--primary)", flexShrink: 0 }} />
+                  </span>
+                </th>
+                <th style={thStyle}>TAX</th>
+                <th style={{ ...thStyle, textAlign: "right" }}>AMOUNT</th>
+                <th style={{ ...thStyle, textAlign: "right" }}>AMOUNT GBP</th>
+                <th style={{ ...thStyle, padding: "10px 8px" }}>
+                  <SlidersHorizontal size={14} style={{ color: "var(--muted-foreground)" }} />
+                </th>
               </tr>
+            </thead>
+            <tbody>
+              {pageRows.map(tx => {
+                const sel = selectedRows.has(tx.id);
+                return (
+                  <tr
+                    key={tx.id}
+                    style={{ background: sel ? "rgba(0,120,255,.025)" : "transparent", transition: "background .1s" }}
+                    onMouseEnter={e => { if (!sel) e.currentTarget.style.background = "var(--muted)"; }}
+                    onMouseLeave={e => { if (!sel) e.currentTarget.style.background = "transparent"; }}
+                  >
+                    {/* Checkbox */}
+                    <td style={{ ...tdStyle, textAlign: "center", padding: "10px 8px" }}>
+                      <input type="checkbox" checked={sel} onChange={() => toggleRow(tx.id)} style={{ accentColor: "var(--primary)", cursor: "pointer" }} />
+                    </td>
+
+                    {/* Date */}
+                    <td style={{ ...tdStyle, color: "var(--muted-foreground)", fontSize: 12 }}>{tx.d}</td>
+
+                    {/* Name */}
+                    <td style={{ ...tdStyle }}>
+                      <div style={{ display: "flex", alignItems: "center", gap: 5, minWidth: 0 }}>
+                        {tx.isManual && (
+                          <svg width={13} height={13} viewBox="0 0 24 24" fill="none" stroke="var(--muted-foreground)" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }} title="Manually categorized">
+                            <path d="M18 11V6a2 2 0 0 0-2-2v0a2 2 0 0 0-2 2v0" />
+                            <path d="M14 10V4a2 2 0 0 0-2-2v0a2 2 0 0 0-2 2v2" />
+                            <path d="M10 10.5V6a2 2 0 0 0-2-2v0a2 2 0 0 0-2 2v8" />
+                            <path d="M18 8a2 2 0 1 1 4 0v6a8 8 0 0 1-8 8h-2c-2.8 0-4.5-.86-5.99-2.34l-3.6-3.6a2 2 0 0 1 2.83-2.82L7 15" />
+                          </svg>
+                        )}
+                        <span style={{ fontWeight: 500, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{tx.n}</span>
+                      </div>
+                    </td>
+
+                    {/* AI% + Category */}
+                    <td style={{ ...tdStyle }}>
+                      <div style={{ display: "flex", alignItems: "center", gap: 6, flexWrap: "nowrap", minWidth: 0 }}>
+                        {tx.aiConf != null && (
+                          <span style={{ fontSize: 12, fontWeight: 700, color: aiColor(tx.aiConf), flexShrink: 0 }}>
+                            {tx.aiConf}%
+                          </span>
+                        )}
+                        <span style={{
+                          fontSize: 13, fontWeight: 500,
+                          color: tx.catType === "expense" ? "var(--warning)"
+                               : tx.catType === "income" ? "var(--primary)"
+                               : "var(--primary)",
+                          overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
+                          cursor: "pointer",
+                          flexShrink: 1, minWidth: 0,
+                        }}>
+                          {tx.cat}
+                        </span>
+                        {tx.hasLink && (
+                          <svg width={13} height={13} viewBox="0 0 24 24" fill="none" stroke="var(--muted-foreground)" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}>
+                            <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" />
+                            <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" />
+                          </svg>
+                        )}
+                        {tx.extraCats > 0 && (
+                          <span style={{
+                            display: "inline-flex", alignItems: "center", flexShrink: 0,
+                            padding: "1px 6px", borderRadius: 5,
+                            background: "var(--muted)", border: "1px solid var(--border)",
+                            fontSize: 10, fontWeight: 600, color: "var(--muted-foreground)",
+                          }}>+{tx.extraCats}</span>
+                        )}
+                      </div>
+                    </td>
+
+                    {/* Tax */}
+                    <td style={{ ...tdStyle, color: "var(--muted-foreground)", fontSize: 12 }}>
+                      {tx.tax != null ? `${tx.tax}%` : ""}
+                    </td>
+
+                    {/* Amount */}
+                    <td style={{ ...tdStyle, textAlign: "right", ...numStyle }}>
+                      <span style={{ color: tx.amount > 0 ? "var(--positive)" : "var(--foreground)", fontWeight: 500 }}>
+                        {fmtAmt(tx.amount, tx.currency)}
+                      </span>
+                    </td>
+
+                    {/* Amount GBP */}
+                    <td style={{ ...tdStyle, textAlign: "right", ...numStyle }}>
+                      <span style={{ color: tx.amountGbp > 0 ? "var(--positive)" : "var(--foreground)", fontWeight: 500 }}>
+                        {fmtAmt(tx.amountGbp, "GBP")}
+                      </span>
+                    </td>
+
+                    {/* Row actions */}
+                    <td style={{ ...tdStyle, padding: "10px 8px", textAlign: "center" }}>
+                      <DropdownMenu
+                        trigger={
+                          <button style={{
+                            padding: 4, background: "transparent", border: "none",
+                            borderRadius: "var(--radius)", cursor: "pointer",
+                            color: "var(--muted-foreground)", display: "flex", alignItems: "center",
+                            transition: "background .15s, color .15s",
+                          }}
+                            onMouseEnter={e => { e.currentTarget.style.background = "var(--accent)"; e.currentTarget.style.color = "var(--foreground)"; }}
+                            onMouseLeave={e => { e.currentTarget.style.background = "transparent"; e.currentTarget.style.color = "var(--muted-foreground)"; }}
+                          >
+                            <MoreHorizontal size={15} />
+                          </button>
+                        }
+                        items={[
+                          { icon: <Pencil size={13} />, text: "Edit transaction" },
+                          { icon: <Filter size={13} />, text: "Categorize" },
+                          { separator: true },
+                          { icon: <X size={13} />, text: "Exclude", danger: true },
+                        ]}
+                      />
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+
+        {/* Bottom bar */}
+        <div style={{
+          display: "flex", alignItems: "center", justifyContent: "space-between",
+          padding: "12px 16px", borderTop: "1px solid var(--border)",
+          flexWrap: "wrap", gap: 8,
+        }}>
+          {/* Selection count */}
+          <span style={{ fontSize: 13, color: "var(--muted-foreground)", minWidth: 140 }}>
+            {selectedRows.size} of {filtered.length} row(s) selected
+          </span>
+
+          {/* Pagination */}
+          <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
+            {/* Previous */}
+            <button
+              onClick={() => setPage(p => Math.max(1, p - 1))}
+              disabled={safePage === 1}
+              style={{
+                display: "inline-flex", alignItems: "center", gap: 4,
+                padding: "5px 10px",
+                background: "transparent",
+                color: safePage === 1 ? "var(--muted-foreground)" : "var(--foreground)",
+                border: "1px solid var(--border)", borderRadius: "var(--radius)",
+                fontSize: 13, fontWeight: 400,
+                cursor: safePage === 1 ? "not-allowed" : "pointer",
+                opacity: safePage === 1 ? 0.5 : 1, transition: "background .15s",
+              }}
+              onMouseEnter={e => { if (safePage > 1) e.currentTarget.style.background = "var(--accent)"; }}
+              onMouseLeave={e => e.currentTarget.style.background = "transparent"}
+            >
+              <ChevronRight size={13} style={{ transform: "rotate(180deg)" }} /> Previous
+            </button>
+
+            {/* Page numbers */}
+            {pageButtons().map((p, i) => p === "…" ? (
+              <span key={`ell-${i}`} style={{ padding: "4px 6px", color: "var(--muted-foreground)", fontSize: 13 }}>···</span>
+            ) : (
+              <button
+                key={p}
+                onClick={() => setPage(p)}
+                style={{
+                  width: 32, height: 32,
+                  display: "flex", alignItems: "center", justifyContent: "center",
+                  background: safePage === p ? "var(--foreground)" : "transparent",
+                  color: safePage === p ? "var(--background)" : "var(--foreground)",
+                  border: `1px solid ${safePage === p ? "var(--foreground)" : "var(--border)"}`,
+                  borderRadius: "var(--radius)", fontSize: 13, fontWeight: safePage === p ? 600 : 400,
+                  cursor: "pointer", transition: "all .15s",
+                }}
+                onMouseEnter={e => { if (safePage !== p) e.currentTarget.style.background = "var(--accent)"; }}
+                onMouseLeave={e => { if (safePage !== p) e.currentTarget.style.background = "transparent"; }}
+              >{p}</button>
             ))}
-          </tbody>
-        </table>
+
+            {/* Next */}
+            <button
+              onClick={() => setPage(p => Math.min(totalPages, p + 1))}
+              disabled={safePage === totalPages}
+              style={{
+                display: "inline-flex", alignItems: "center", gap: 4,
+                padding: "5px 10px",
+                background: "transparent",
+                color: safePage === totalPages ? "var(--muted-foreground)" : "var(--foreground)",
+                border: "1px solid var(--border)", borderRadius: "var(--radius)",
+                fontSize: 13, fontWeight: 400,
+                cursor: safePage === totalPages ? "not-allowed" : "pointer",
+                opacity: safePage === totalPages ? 0.5 : 1, transition: "background .15s",
+              }}
+              onMouseEnter={e => { if (safePage < totalPages) e.currentTarget.style.background = "var(--accent)"; }}
+              onMouseLeave={e => e.currentTarget.style.background = "transparent"}
+            >
+              Next <ChevronRight size={13} />
+            </button>
+          </div>
+
+          {/* Rows per page */}
+          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+            <span style={{ fontSize: 13, color: "var(--muted-foreground)" }}>Rows per page</span>
+            <select
+              value={rowsPerPage}
+              onChange={e => { setRowsPerPage(Number(e.target.value)); setPage(1); }}
+              style={{
+                padding: "4px 28px 4px 8px", border: "1px solid var(--border)",
+                borderRadius: "var(--radius)", fontSize: 13,
+                color: "var(--foreground)", background: "var(--background)",
+                cursor: "pointer", outline: "none",
+                appearance: "none",
+                backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%23888' stroke-width='2'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E")`,
+                backgroundRepeat: "no-repeat", backgroundPosition: "right 8px center",
+              }}
+            >
+              {[10, 25, 50].map(n => <option key={n} value={n}>{n}</option>)}
+            </select>
+          </div>
+        </div>
       </Crd>
+
+      {/* AI upload prompt */}
       <div style={{ marginTop: 16, padding: "14px 18px", border: "1px dashed rgba(0,120,255,.2)", borderRadius: "calc(var(--radius) + 4px)", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
         <div>
           <div style={{ fontSize: 13, fontWeight: 500, color: "var(--foreground)" }}>✨ AI-powered reconciliation available</div>
@@ -1489,6 +2008,32 @@ function Screen1({ go }) {
         </div>
         <Btn outline blue sm onClick={go}>↑ Upload CSV</Btn>
       </div>
+
+      {/* Create transaction modal */}
+      {createModal && (
+        <CreateTxModal
+          direction={createModal}
+          onClose={() => setCreateModal(null)}
+          onSave={tx => {
+            const newTx = {
+              id: "tx-" + Date.now(),
+              d: tx.d.split("-").reverse().join("/"),
+              n: tx.n,
+              aiConf: null,
+              cat: tx.cat,
+              catType: tx.catType,
+              isManual: true,
+              tax: tx.tax,
+              amount: tx.amount,
+              currency: tx.currency,
+              amountGbp: tx.currency === "GBP" ? tx.amount : Math.round(tx.amount * 0.858 * 100) / 100,
+              hasLink: false,
+              extraCats: 0,
+            };
+            setTransactions(p => [newTx, ...p]);
+          }}
+        />
+      )}
     </div>
   );
 }
@@ -1647,30 +2192,21 @@ function Screen3({ go }) {
   const diff = stmtBalNum - (beginBal + netMatched);
   const diffZero = Math.abs(diff) < 0.01;
 
+  // Debit In / Credit Out — computed from all period transactions
+  const allPeriodAmounts = [
+    ...matched.flatMap(m => [m.L?.a, m.R?.a]),
+    ...attention.flatMap(a => [a.L?.a, ...(a.ledgerItems || []).map(li => li.a), a.R?.a]),
+  ].filter(v => v != null && v !== 0);
+  const debitIn  = allPeriodAmounts.filter(v => v > 0).reduce((s, v) => s + v, 0);
+  const creditOut = Math.abs(allPeriodAmounts.filter(v => v < 0).reduce((s, v) => s + v, 0));
+
+  // AI suggestion counter for bridge label
+  const aiSuggestedCount = attention.filter(i => i.aiSuggested).length;
+
   // Change 3: Accept — immediately moves to Resolved
   function acceptItem(item) {
     setAttention(p => p.filter(a => a.id !== item.id));
     setResolved(p => [{ id: item.id, L: item.L, R: item.R, how: "AI Accepted" }, ...p]);
-    setResolvedOpen(true);
-    flash("Resolved: " + (item.L?.n || item.R?.n || "item"));
-  }
-
-  // Change 3: Update — applies AI override inline, card stays, shows Resolve button
-  function updateItem(item) {
-    setAttention(p => p.map(a => {
-      if (a.id !== item.id) return a;
-      let updatedL = { ...a.L };
-      if (a.type === "Date offset") updatedL = { ...updatedL, d: a.R?.d || updatedL.d };
-      if (a.type === "Name variant") updatedL = { ...updatedL, n: a.R?.n || updatedL.n };
-      if (a.type === "Amount diff") updatedL = { ...updatedL, a: a.R?.a ?? updatedL.a };
-      return { ...a, L: updatedL, _updated: true };
-    }));
-  }
-
-  // Change 3: Resolve after Update — moves to Resolved
-  function resolveUpdated(item) {
-    setAttention(p => p.filter(a => a.id !== item.id));
-    setResolved(p => [{ id: item.id, L: item.L, R: item.R, how: "AI Updated" }, ...p]);
     setResolvedOpen(true);
     flash("Resolved: " + (item.L?.n || item.R?.n || "item"));
   }
@@ -1701,14 +2237,34 @@ function Screen3({ go }) {
     flash("Moved back to Needs Attention");
   }
 
+  function uncheckResolved(id) {
+    const r = resolved.find(x => x.id === id);
+    if (!r) return;
+    setResolved(p => p.filter(x => x.id !== id));
+    setAttention(p => [{ id, L: r.L, R: r.R, conf: null, type: null, ex: null, at: null, aiSuggested: false }, ...p]);
+    flash("Moved back to Needs Attention");
+  }
+
   function saveEdit(form) {
+    const updated = { n: form.n, a: parseFloat(form.a), d: form.d, cat: form.cat };
     setAttention(p => p.map(a => {
       if (a.id !== editTarget.id) return a;
-      const updated = { n: form.n, a: parseFloat(form.a), d: form.d, cat: form.cat };
+      if (editTarget._candidateIdx != null) {
+        const candidates = [...(a.candidates || [])];
+        candidates[editTarget._candidateIdx] = { ...candidates[editTarget._candidateIdx], ...updated };
+        return { ...a, candidates };
+      }
+      if (editTarget._ledgerItemIdx != null) {
+        const ledgerItems = [...(a.ledgerItems || [])];
+        ledgerItems[editTarget._ledgerItemIdx] = { ...ledgerItems[editTarget._ledgerItemIdx], ...updated };
+        return { ...a, ledgerItems };
+      }
       if (editTarget._editL2) return { ...a, L2: { ...a.L2, ...updated } };
       if (!a.L) return a;
       return { ...a, L: { ...a.L, ...updated } };
     }));
+    setMatched(p => p.map(m => m.id !== editTarget.id ? m : { ...m, L: { ...m.L, ...updated } }));
+    setResolved(p => p.map(r => r.id !== editTarget.id ? r : { ...r, L: r.L ? { ...r.L, ...updated } : r.L }));
     flash("Transaction updated");
   }
 
@@ -1785,7 +2341,7 @@ function Screen3({ go }) {
   ];
   const matchTotal = matched.reduce((s, m) => s + Math.abs(m.L.a), 0);
   const resolvedTotal = resolved.reduce((s, r) => s + Math.abs((r.L || r.R || {}).a || 0), 0);
-  const canDone = attention.length === 0;
+  const canDone = attention.filter(i => i.type !== "missing-in-bank").length === 0;
   const hasSelection = selL.length > 0 || selR.length > 0;
 
   return (
@@ -1803,73 +2359,70 @@ function Screen3({ go }) {
       {/* Page header */}
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 14 }}>
         <div>
-          <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 6 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 4 }}>
             <h1 style={{ fontSize: 20, fontWeight: 700, color: "var(--foreground)", margin: 0 }}>HSBC Current Account</h1>
           </div>
-          <div style={{ fontSize: 13, color: "var(--muted-foreground)" }}>1 Apr – 30 Jun 2025 · hsbc_q2_2025.csv</div>
+          {/* Period selector inline below account name */}
+          <PeriodSelector
+            periodStart={periodStart} setPeriodStart={setPeriodStart}
+            periodEnd={periodEnd} setPeriodEnd={setPeriodEnd}
+          />
         </div>
         <div style={{ display: "flex", gap: 8 }}>
           <Btn grad onClick={canDone ? go : undefined} disabled={!canDone}>Reconcile</Btn>
         </div>
       </div>
 
-      {/* Stats bar — shared with Screen1 */}
-      <StatsBar
-        start={periodStart} end={periodEnd}
-        onStartChange={setPeriodStart} onEndChange={setPeriodEnd}
-        stmtBal={stmtBal} onStmtBalChange={setStmtBal}
-      />
+      {/* Stats bar */}
+      <StatsBar stmtBal={stmtBal} onStmtBalChange={setStmtBal} debitIn={debitIn} creditOut={creditOut} />
 
       {/* Column labels + TASK-06 search/add controls */}
       <div style={{ display: "grid", gridTemplateColumns: "1fr 180px 1fr", gap: 8, padding: "10px 0 8px", borderTop: "1px solid var(--border)", marginTop: 4 }}>
-        {/* Left: label + search + add/expense buttons */}
-        <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-          <div style={{ fontSize: 11, fontWeight: 600, color: "var(--primary)", textTransform: "uppercase", letterSpacing: ".05em" }}>Fiskl Ledger</div>
-          <div style={{ display: "flex", gap: 4, alignItems: "center" }}>
-            <div style={{ flex: 1, position: "relative", display: "flex", alignItems: "center" }}>
-              <Search size={12} style={{ position: "absolute", left: 8, color: "var(--muted-foreground)", pointerEvents: "none" }} />
-              <input
-                value={searchL}
-                onChange={e => setSearchL(e.target.value)}
-                placeholder="Search ledger…"
-                style={{
-                  width: "100%", padding: "5px 9px 5px 26px", fontSize: 12,
-                  border: "1px solid var(--border)", borderRadius: "var(--radius)",
-                  background: "var(--background)", color: "var(--foreground)",
-                  outline: "none", transition: "border-color .15s",
-                }}
-                onFocus={e => e.target.style.borderColor = "var(--primary)"}
-                onBlur={e => e.target.style.borderColor = "var(--border)"}
-              />
-            </div>
-            <Tooltip content="Add income" side="top">
-              <button onClick={() => flash("Income transaction added")} style={{
-                width: 28, height: 28, borderRadius: "var(--radius)",
-                background: "var(--primary)", color: "#fff",
-                border: "none", cursor: "pointer",
-                display: "flex", alignItems: "center", justifyContent: "center",
-                transition: "opacity .15s",
+        {/* Left: search + add/expense buttons */}
+        <div style={{ display: "flex", gap: 4, alignItems: "center" }}>
+          <div style={{ flex: 1, position: "relative", display: "flex", alignItems: "center" }}>
+            <Search size={12} style={{ position: "absolute", left: 8, color: "var(--muted-foreground)", pointerEvents: "none" }} />
+            <input
+              value={searchL}
+              onChange={e => setSearchL(e.target.value)}
+              placeholder="Search…"
+              style={{
+                width: "100%", padding: "5px 9px 5px 26px", fontSize: 12,
+                border: "1px solid var(--border)", borderRadius: "var(--radius)",
+                background: "var(--background)", color: "var(--foreground)",
+                outline: "none", transition: "border-color .15s",
               }}
-                onMouseEnter={e => e.currentTarget.style.opacity = ".85"}
-                onMouseLeave={e => e.currentTarget.style.opacity = "1"}
-              ><Plus size={14} /></button>
-            </Tooltip>
-            <Tooltip content="Add expense" side="top">
-              <button onClick={() => flash("Expense transaction added")} style={{
-                width: 28, height: 28, borderRadius: "var(--radius)",
-                background: "var(--primary)", color: "#fff",
-                border: "none", cursor: "pointer",
-                display: "flex", alignItems: "center", justifyContent: "center",
-                transition: "opacity .15s",
-              }}
-                onMouseEnter={e => e.currentTarget.style.opacity = ".85"}
-                onMouseLeave={e => e.currentTarget.style.opacity = "1"}
-              ><Minus size={14} /></button>
-            </Tooltip>
+              onFocus={e => e.target.style.borderColor = "var(--primary)"}
+              onBlur={e => e.target.style.borderColor = "var(--border)"}
+            />
           </div>
+          <Tooltip content="Add income" side="top">
+            <button onClick={() => flash("Income transaction added")} style={{
+              width: 28, height: 28, borderRadius: "var(--radius)",
+              background: "transparent", color: "var(--muted-foreground)",
+              border: "1px solid var(--border)", cursor: "pointer",
+              display: "flex", alignItems: "center", justifyContent: "center",
+              transition: "background .15s, border-color .15s",
+            }}
+              onMouseEnter={e => { e.currentTarget.style.background = "var(--accent)"; e.currentTarget.style.borderColor = "var(--input)"; }}
+              onMouseLeave={e => { e.currentTarget.style.background = "transparent"; e.currentTarget.style.borderColor = "var(--border)"; }}
+            ><Plus size={14} /></button>
+          </Tooltip>
+          <Tooltip content="Add expense" side="top">
+            <button onClick={() => flash("Expense transaction added")} style={{
+              width: 28, height: 28, borderRadius: "var(--radius)",
+              background: "transparent", color: "var(--muted-foreground)",
+              border: "1px solid var(--border)", cursor: "pointer",
+              display: "flex", alignItems: "center", justifyContent: "center",
+              transition: "background .15s, border-color .15s",
+            }}
+              onMouseEnter={e => { e.currentTarget.style.background = "var(--accent)"; e.currentTarget.style.borderColor = "var(--input)"; }}
+              onMouseLeave={e => { e.currentTarget.style.background = "transparent"; e.currentTarget.style.borderColor = "var(--border)"; }}
+            ><Minus size={14} /></button>
+          </Tooltip>
         </div>
-        {/* Center: AI Matching Bridge label */}
-        <div style={{ display: "flex", alignItems: "flex-end", justifyContent: "center", paddingBottom: 2 }}>
+        {/* Center: AI Matching Bridge label + suggestion count */}
+        <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 3 }}>
           <div style={{ display: "flex", alignItems: "center", gap: 5 }}>
             <Sparkles size={13} style={{ flexShrink: 0, stroke: "url(#sparklesGrad)" }} />
             <svg width={0} height={0} style={{ position: "absolute" }}>
@@ -1883,26 +2436,28 @@ function Screen3({ go }) {
             </svg>
             <span style={{ fontSize: 11, fontWeight: 600, background: "linear-gradient(92deg,#0058FF 0%,#00B4FF 45%,#00E0A0 100%)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent", backgroundClip: "text", textTransform: "uppercase", letterSpacing: ".04em", whiteSpace: "nowrap" }}>AI Matching Bridge</span>
           </div>
+          {aiSuggestedCount > 0 && (
+            <div style={{ fontSize: 10, color: "var(--muted-foreground)" }}>
+              {aiSuggestedCount} AI suggestion{aiSuggestedCount !== 1 ? "s" : ""}
+            </div>
+          )}
         </div>
-        {/* Right: label + search */}
-        <div style={{ display: "flex", flexDirection: "column", gap: 6, alignItems: "flex-end" }}>
-          <div style={{ fontSize: 11, fontWeight: 600, color: "var(--muted-foreground)", textTransform: "uppercase", letterSpacing: ".05em" }}>Bank Statement</div>
-          <div style={{ width: "100%", position: "relative", display: "flex", alignItems: "center" }}>
-            <Search size={12} style={{ position: "absolute", left: 8, color: "var(--muted-foreground)", pointerEvents: "none" }} />
-            <input
-              value={searchR}
-              onChange={e => setSearchR(e.target.value)}
-              placeholder="Search statement…"
-              style={{
-                width: "100%", padding: "5px 9px 5px 26px", fontSize: 12,
-                border: "1px solid var(--border)", borderRadius: "var(--radius)",
-                background: "var(--background)", color: "var(--foreground)",
-                outline: "none", transition: "border-color .15s",
-              }}
-              onFocus={e => e.target.style.borderColor = "var(--primary)"}
-              onBlur={e => e.target.style.borderColor = "var(--border)"}
-            />
-          </div>
+        {/* Right: search */}
+        <div style={{ position: "relative", display: "flex", alignItems: "center" }}>
+          <Search size={12} style={{ position: "absolute", left: 8, color: "var(--muted-foreground)", pointerEvents: "none" }} />
+          <input
+            value={searchR}
+            onChange={e => setSearchR(e.target.value)}
+            placeholder="Search…"
+            style={{
+              width: "100%", padding: "5px 9px 5px 26px", fontSize: 12,
+              border: "1px solid var(--border)", borderRadius: "var(--radius)",
+              background: "var(--background)", color: "var(--foreground)",
+              outline: "none", transition: "border-color .15s",
+            }}
+            onFocus={e => e.target.style.borderColor = "var(--primary)"}
+            onBlur={e => e.target.style.borderColor = "var(--border)"}
+          />
         </div>
       </div>
 
@@ -1916,11 +2471,13 @@ function Screen3({ go }) {
               : filteredAttention.length === 0
               ? <div style={{ textAlign: "center", padding: "20px 0", color: "var(--muted-foreground)", fontSize: 13 }}>No results match your search</div>
               : filteredAttention.map(item => {
-                  const isNotInLedger = !item.L && !item.aiSuggested;
+                  const isMissingInBank = item.type === "missing-in-bank";
+                  const isOneToMany = item.type === "one-to-many";
+                  const isNotInLedger = !item.L && !item.aiSuggested && !isOneToMany;
                   const wasCreated = createdLedger[item.id];
                   const showL = itemLVisible(item);
-                  const showR = itemRVisible(item);
-                  const showBridge = showL && showR;
+                  const showR = !isMissingInBank && itemRVisible(item);
+                  const showBridge = isMissingInBank ? showL : (showL && showR);
                   return (
                     <div key={item.id} style={{ display: "grid", gridTemplateColumns: "1fr 180px 1fr", gap: 8 }}>
                       {/* Left: Ledger side */}
@@ -1945,6 +2502,14 @@ function Screen3({ go }) {
                                         <div style={{ fontSize: 13, fontWeight: 600, color: "var(--foreground)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{c.n}</div>
                                         {c.cat && <div style={{ fontSize: 11, color: "var(--muted-foreground)", marginTop: 1 }}>{c.cat}</div>}
                                       </div>
+                                      <button onClick={e => { e.stopPropagation(); setEditTarget({ id: item.id, L: c, _candidateIdx: i }); }} style={{
+                                        flexShrink: 0, width: 22, height: 22, display: "flex", alignItems: "center", justifyContent: "center",
+                                        background: "transparent", border: "1px solid var(--border)", borderRadius: "var(--radius)",
+                                        cursor: "pointer", color: "var(--muted-foreground)", transition: "background .15s",
+                                      }}
+                                        onMouseEnter={e => e.currentTarget.style.background = "var(--accent)"}
+                                        onMouseLeave={e => e.currentTarget.style.background = "transparent"}
+                                      ><Pencil size={11} /></button>
                                     </div>
                                   </Crd>
                                 </div>
@@ -1952,30 +2517,67 @@ function Screen3({ go }) {
                             })}
                           </div>
                         )
+                        : isOneToMany && item.ledgerItems?.length
+                          ? (
+                            <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+                              {item.ledgerItems.map((li, i) => (
+                                <Crd key={i} style={{ padding: "8px 10px" }}>
+                                  <div style={{ display: "flex", alignItems: "flex-start", gap: 6 }}>
+                                    <div style={{ flex: 1, minWidth: 0 }}>
+                                      <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 2 }}>
+                                        <span style={{ fontSize: 11, color: "var(--muted-foreground)" }}>{li.d}</span>
+                                        <Amt a={li.a} sm />
+                                      </div>
+                                      <div style={{ fontSize: 12, fontWeight: 500, color: "var(--foreground)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{li.n}</div>
+                                      {li.cat && <div style={{ fontSize: 11, color: "var(--muted-foreground)", marginTop: 1 }}>{li.cat}</div>}
+                                    </div>
+                                    <button onClick={e => { e.stopPropagation(); setEditTarget({ id: item.id, L: li, _ledgerItemIdx: i }); }} style={{
+                                      flexShrink: 0, width: 22, height: 22, display: "flex", alignItems: "center", justifyContent: "center",
+                                      background: "transparent", border: "1px solid var(--border)", borderRadius: "var(--radius)",
+                                      cursor: "pointer", color: "var(--muted-foreground)", transition: "background .15s",
+                                    }}
+                                      onMouseEnter={e => e.currentTarget.style.background = "var(--accent)"}
+                                      onMouseLeave={e => e.currentTarget.style.background = "transparent"}
+                                    ><Pencil size={11} /></button>
+                                  </div>
+                                </Crd>
+                              ))}
+                            </div>
+                          )
                         : item.L
                           ? <LedgerItem item={item.L} checked={selL.includes(item.id)} onCheck={() => toggleSelL(item.id)} onEdit={() => setEditTarget(item)} />
                           : <div />
                       }
-                      {/* Center column — only when both sides visible */}
-                      {!showBridge ? <div /> : isNotInLedger || wasCreated
-                        ? <NotInLedgerCenter
-                            statementItem={item.R}
-                            created={wasCreated}
-                            onCreated={stmtItem => handleCreateLedger(item.id, stmtItem)}
-                            onResolve={() => handleResolveCreated(item.id)}
-                          />
-                        : item.aiSuggested
-                          ? <ConfBox item={item} onAccept={item.type === "Duplicate" ? resolveDuplicates : acceptItem} onUpdate={updateItem} onResolveUpdated={resolveUpdated} onDismissBoth={ignoreDuplication} />
-                          : (
-                            <div style={{ display: "flex", alignItems: "center", justifyContent: "center" }}>
-                              <div style={{ padding: "8px 10px", borderRadius: "calc(var(--radius) + 4px)", border: "1px dashed var(--border)", background: "var(--muted)", textAlign: "center" }}>
-                                <div style={{ fontSize: 11, color: "var(--muted-foreground)", marginBottom: 4 }}>No match found</div>
-                                <div style={{ fontSize: 10, color: "var(--muted-foreground)" }}>Select & resolve manually</div>
-                              </div>
+                      {/* Center column */}
+                      {!showBridge ? <div /> : isMissingInBank
+                        ? (
+                          <div style={{ display: "flex", alignItems: "center", justifyContent: "center" }}>
+                            <div style={{ padding: "10px", borderRadius: "calc(var(--radius) + 4px)", border: "1px dashed var(--border)", background: "var(--muted)", textAlign: "center", width: "100%", boxSizing: "border-box" }}>
+                              <div style={{ fontSize: 11, fontWeight: 600, color: "var(--muted-foreground)", marginBottom: 4 }}>Missing in Bank</div>
+                              <div style={{ fontSize: 10, color: "var(--muted-foreground)", lineHeight: 1.4 }}>Carries forward to next period</div>
                             </div>
-                          )
+                          </div>
+                        )
+                        : isNotInLedger || wasCreated
+                          ? <NotInLedgerCenter
+                              statementItem={item.R}
+                              created={wasCreated}
+                              onCreated={stmtItem => handleCreateLedger(item.id, stmtItem)}
+                              onResolve={() => handleResolveCreated(item.id)}
+                            />
+                          : item.aiSuggested
+                            ? <ConfBox item={item} onAccept={item.type === "Duplicate" ? resolveDuplicates : acceptItem} onDismissBoth={ignoreDuplication} />
+                            : (
+                              <div style={{ display: "flex", alignItems: "center", justifyContent: "center" }}>
+                                <div style={{ padding: "8px 10px", borderRadius: "calc(var(--radius) + 4px)", border: "1px dashed var(--border)", background: "var(--muted)", textAlign: "center" }}>
+                                  <div style={{ fontSize: 11, color: "var(--muted-foreground)", marginBottom: 4 }}>No match found</div>
+                                  <div style={{ fontSize: 10, color: "var(--muted-foreground)" }}>Select & resolve manually</div>
+                                </div>
+                              </div>
+                            )
                       }
-                      {showR
+                      {/* Right: Bank Statement side (empty for missing-in-bank) */}
+                      {isMissingInBank ? <div /> : showR
                         ? <StatementItem item={item.R} checked={selR.includes(item.id)} onCheck={() => toggleSelR(item.id)} />
                         : <div />
                       }
@@ -2018,9 +2620,25 @@ function Screen3({ go }) {
                 }
                 return (
                   <div key={r.id || i} style={{ display: "grid", gridTemplateColumns: "1fr 180px 1fr", gap: 8, opacity: .65 }}>
-                    <Crd style={{ padding: "8px 10px" }}>
-                      {r.L ? <><div style={{ fontSize: 11, color: "var(--muted-foreground)" }}>{r.L.d}</div><div style={{ fontSize: 12, fontWeight: 500, color: "var(--foreground)" }}>{r.L.n}</div><Amt a={r.L.a} sm /></> : <span style={{ fontSize: 12, color: "var(--muted-foreground)" }}>—</span>}
-                    </Crd>
+                    {/* Left: ledger side with checkbox + edit */}
+                    <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                      <input type="checkbox" checked={true} onChange={() => uncheckResolved(r.id)} style={{ accentColor: "var(--primary)", flexShrink: 0 }} title="Uncheck to move back" />
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        {r.L
+                          ? <><div style={{ fontSize: 11, color: "var(--muted-foreground)" }}>{r.L.d}</div><div style={{ fontSize: 12, fontWeight: 500, color: "var(--foreground)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{r.L.n}</div><Amt a={r.L.a} sm /></>
+                          : <span style={{ fontSize: 12, color: "var(--muted-foreground)" }}>—</span>}
+                      </div>
+                      {r.L && (
+                        <button onClick={e => { e.stopPropagation(); setEditTarget(r); }} style={{
+                          flexShrink: 0, width: 22, height: 22, display: "flex", alignItems: "center", justifyContent: "center",
+                          background: "transparent", border: "1px solid var(--border)", borderRadius: "var(--radius)",
+                          cursor: "pointer", color: "var(--muted-foreground)", transition: "background .15s",
+                        }}
+                          onMouseEnter={e => e.currentTarget.style.background = "var(--accent)"}
+                          onMouseLeave={e => e.currentTarget.style.background = "transparent"}
+                        ><Pencil size={11} /></button>
+                      )}
+                    </div>
                     <div style={{ display: "flex", alignItems: "center", justifyContent: "center" }}>
                       <span style={{
                         fontSize: 10, fontWeight: 600, padding: "3px 8px",
@@ -2028,9 +2646,15 @@ function Screen3({ go }) {
                         ...badgeStyle,
                       }}>{r.how}</span>
                     </div>
-                    <Crd style={{ padding: "8px 10px" }}>
-                      {r.R ? <><div style={{ fontSize: 11, color: "var(--muted-foreground)" }}>{r.R.d}</div><div style={{ fontSize: 12, fontWeight: 500, color: "var(--foreground)" }}>{r.R.n}</div><Amt a={r.R.a} sm /></> : <span style={{ fontSize: 12, color: "var(--muted-foreground)" }}>—</span>}
-                    </Crd>
+                    {/* Right: statement side with checkbox */}
+                    <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                      <input type="checkbox" checked={true} onChange={() => uncheckResolved(r.id)} style={{ accentColor: "var(--primary)", flexShrink: 0 }} title="Uncheck to move back" />
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        {r.R
+                          ? <><div style={{ fontSize: 11, color: "var(--muted-foreground)" }}>{r.R.d}</div><div style={{ fontSize: 12, fontWeight: 500, color: "var(--foreground)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{r.R.n}</div><Amt a={r.R.a} sm /></>
+                          : <span style={{ fontSize: 12, color: "var(--muted-foreground)" }}>—</span>}
+                      </div>
+                    </div>
                   </div>
                 );
               })}
@@ -2041,7 +2665,7 @@ function Screen3({ go }) {
 
       {/* Auto Matched */}
       <Crd style={{ marginBottom: 12, overflow: "hidden", borderColor: "rgba(0,232,157,.15)" }}>
-        <SecHdr icon="✓" color="var(--positive)" title="Auto Matched" itemCount={filteredMatched.length} totalAmt={matchTotal} open={matchOpen} onToggle={() => setMatchOpen(!matchOpen)} />
+        <SecHdr icon="✓" color="var(--positive)" title="Auto Matched" itemCount={filteredMatched.length} open={matchOpen} onToggle={() => setMatchOpen(!matchOpen)} />
         {matchOpen && (
           <div style={{ padding: "0 14px 14px" }}>
             {filteredMatched.length === 0 && matched.length > 0 && (
@@ -2055,7 +2679,7 @@ function Screen3({ go }) {
               <div key={m.id} style={{ display: "grid", gridTemplateColumns: "1fr 180px 1fr", gap: 8, padding: "6px 0", borderBottom: "1px solid var(--border)" }}>
                 {mShowL ? (
                 <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                  <input type="checkbox" checked={true} onChange={() => uncheckMatched(m.id)} style={{ accentColor: "var(--positive)" }} title="Uncheck to move back" />
+                  <input type="checkbox" checked={true} onChange={() => uncheckMatched(m.id)} style={{ accentColor: "var(--positive)", flexShrink: 0 }} title="Uncheck to move back" />
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <div style={{ display: "flex", justifyContent: "space-between" }}>
                       <span style={{ fontSize: 11, color: "var(--muted-foreground)" }}>{m.L.d}</span>
@@ -2063,12 +2687,22 @@ function Screen3({ go }) {
                     </div>
                     <div style={{ fontSize: 12, fontWeight: 500, color: "var(--foreground)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{m.L.n}</div>
                   </div>
+                  <button onClick={e => { e.stopPropagation(); setEditTarget(m); }} style={{
+                    flexShrink: 0, width: 22, height: 22, display: "flex", alignItems: "center", justifyContent: "center",
+                    background: "transparent", border: "1px solid var(--border)", borderRadius: "var(--radius)",
+                    cursor: "pointer", color: "var(--muted-foreground)", transition: "background .15s",
+                  }}
+                    onMouseEnter={e => e.currentTarget.style.background = "var(--accent)"}
+                    onMouseLeave={e => e.currentTarget.style.background = "transparent"}
+                  ><Pencil size={11} /></button>
                 </div>
                 ) : <div />}
                 {mShowBridge ? (
-                <div style={{ display: "flex", alignItems: "center", justifyContent: "center", flexDirection: "column", gap: 3 }}>
-                  <Badge v="ai" xs>AI</Badge>
-                  <span style={{ fontSize: 11, fontWeight: 700, color: "var(--positive)" }}>{m.conf}%</span>
+                <div style={{ display: "flex", alignItems: "center", justifyContent: "center" }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: 3, color: "var(--primary)" }}>
+                    <Star size={10} style={{ fill: "var(--primary)", stroke: "none", flexShrink: 0 }} />
+                    <span style={{ fontSize: 10, fontWeight: 600 }}>AI Matched</span>
+                  </div>
                 </div>
                 ) : <div />}
                 {mShowR ? (
